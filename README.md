@@ -40,23 +40,17 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 * `aws_flavor`: The AWS instance type. Default: `c3.xlarge`
 * `aws_instance_name`: The AWS tag for Name. Default: `chef-server` will result in a Name tag of `${var.aws_instance_name}-${var.aws_instance_count}-${var.chef_org}`
 * `aws_instance_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
-* `chef_org`: The organization to create on the CHEF Server. Default: `example`
-* `chef_org_long`: The long organization name to create on the CHEF Server. Default: `Example CHEF Organization`
-* `chef_username`: The first user for your chef server. Default: `example`
-* `chef_user_firstname`: The first user's first name. Default: `example`
-* `chef_user_lastname`: The first user's last name. Default: `user`
-* `chef_user_email`: The first user's e-mail address. Default: `example@domain.tld`
+* `chef_org`: The CHEF Server ORG to join/use.
+* `chef_server_url`: The CHEF Server's URL.
+* `chef_delivery_license`: Path to the `delivery.license` file
 
 ## Outputs
 
 * `id`: The AWS instance id of the instance created
 * `public_ip`: The public IP of the instance created
 * `security_group_id`: The AWS security group id for this instance
-* `chef_server_url`: The URL of the CHEF Server created
-* `chef_username`: The first user's CHEF Server username
-* `chef_user_password`: The password for your first chef user
-* `chef_username_pem`: The pem key for the first user on your CHEF Server
-* `chef_org_validator`: The file for the CHEF Server's validation PEM
+* `chef_delivery_enterprise`: The CHEF Delivery enterprise created
+* `chef_delivery_creds`: CHEF Delivery credentials with useful login information
 
 ## Contributors
 

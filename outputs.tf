@@ -12,7 +12,7 @@ output "chef_delivery_enterprise" {
   value = "${var.chef_delivery_enterprise}"
 }
 output "chef_delivery_creds" {
-  value = "${file("/tmp/${var.chef_delivery_enterprise}.creds")}"
+  value = "${file("${path.cwd}/.chef/${var.chef_delivery_enterprise}.creds")}"
 }
 #output "chef_delivery_build_ips" {
 #  value = "${template_file.delivery_build_keys.rendered}"

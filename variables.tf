@@ -59,6 +59,9 @@ variable "chef_delivery_username" {
   description = "Username of the first CHEF Delivery user"
   default = "example"
 }
+variable "chef_delivery_license" {
+  description = "Path to CHEF Delivery license file"
+}
 variable "chef_server_url" {
   Description = "The CHEF Server URL to use for the CHEF provisioner"
 }
