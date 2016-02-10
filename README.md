@@ -11,7 +11,7 @@ Terraform module to setup a CHEF Delivery. Requires tf_chef_server.
   * 22/tcp: SSH
   * 443/tcp: HTTPS
   * 80/tcp: HTTP
-  * 10000-10003: CHEF Push Jobs
+  * 8989/tcp: GIT
 * Understand Terraform and ability to read the source
 
 ## Supported OSes
@@ -38,18 +38,16 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 * `aws_ami_user`: The user for the AMI you're using. Example: `centos`
 * `aws_ami_id`: The AWS id of the AMI. Default: `ami-45844401` [CentOS 6 (x86_64) - with Updates HVM (us-west-1)](https://aws.amazon.com/marketplace/pp/B00NQAYLWO)
 * `aws_flavor`: The AWS instance type. Default: `c3.xlarge`
-* `aws_instance_name`: The AWS tag for Name. Default: `chef-server` will result in a Name tag of `${var.aws_instance_name}-${var.aws_instance_count}-${var.chef_org}`
-* `aws_instance_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
-* `chef_org`: The CHEF Server ORG to join/use.
+* `chef_org`: The CHEF Server organization
 * `chef_server_url`: The CHEF Server's URL.
+* `chef_delivery_name`: The AWS tag for Name. Default: `chef-delivery` will result in a Name tag of `${var.chef_delivery_name}-${var.chef_delivery_count}-${var.chef_org}`
+* `chef_delivery_enterprise`: Delivery uses an Enterprise that supports multiple Organizations. Default `Example`
+* `chef_delivery_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
+* `chef_delivery_username`: The first delivery user to create. Default `example`
 * `chef_delivery_license`: Path to the `delivery.license` file
 
 ## Outputs
 
-* `id`: The AWS instance id of the instance created
-* `public_ip`: The public IP of the instance created
-* `security_group_id`: The AWS security group id for this instance
-* `chef_delivery_enterprise`: The CHEF Delivery enterprise created
 * `chef_delivery_creds`: CHEF Delivery credentials with useful login information
 
 ## Contributors
