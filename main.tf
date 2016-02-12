@@ -106,12 +106,12 @@ ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/keys/builder_key
 ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/keys/builder_key.pem
 cd ${path.cwd}/.chef/keys
 cp builder_key.pem builder_key_databag
-cp delivery.pem delivery_pem_databag
+cp ${var.username}.pem ${var.username}_pem_databag
 perl -pe 's/\n/\\n/g' -i builder_key_databag
-perl -pe 's/\n/\\n/g' -i delivery_pem_databag
+perl -pe 's/\n/\\n/g' -i ${var.username}_pem_databag
 perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
-perl -pe 's/DELIVERY_PEM/`cat delivery_pem_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
-rm builder_key_databag delivery_pem_databag
+perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
+rm builder_key_databag ${var.username}_pem_databag
 cd ../..
 # Create the data-bag keys
 knife data bag create keys 
