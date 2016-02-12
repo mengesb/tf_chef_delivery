@@ -96,18 +96,23 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 {
 "id": "delivery_builder_keys",
 "builder_key": "BUILDER_KEY",
-"delivery_pem": "${path.cwd}/.chef/keys/${var.username}.pem"
+"delivery_pem": "DELIVERY_PEM"
 }
 EOK
-ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/keys/builder_key
-cd ${path.cwd}/.chef/keys
-cp builder_key builder_key_databag
-perl -pe 's/\n/\\n/g' -i builder_key_databag
-perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
-rm builder_key_databag
-cd ../..
 # Encryption key
 openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/keys/encrypted_data_bag_secret
+# SSH Keys
+ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/keys/builder_key
+ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/keys/builder_key.pem
+cd ${path.cwd}/.chef/keys
+cp builder_key.pem builder_key_databag
+cp delivery.pem delivery_pem_databag
+perl -pe 's/\n/\\n/g' -i builder_key_databag
+perl -pe 's/\n/\\n/g' -i delivery_pem_databag
+perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
+perl -pe 's/DELIVERY_PEM/`cat delivery_pem_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
+rm builder_key_databag delivery_pem_databag
+cd ../..
 # Create the data-bag keys
 knife data bag create keys 
 knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/keys/encrypted_data_bag_secret
