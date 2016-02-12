@@ -4,9 +4,10 @@ Terraform module to setup a CHEF Delivery. Requires tf_chef_server.
 ## Assumptions
 
 * Uses AWS
-* Can find the correct AMI for your region
-* You will be creating your own VPC, subnet and handle networking/routing
-* Uses a public IP
+* You will supply the AMI
+* You will supply the subnet
+* You will supply the VPC
+* Uses a public IP and public DNS
 * Default security group implementation
   * 22/tcp: SSH
   * 443/tcp: HTTPS
@@ -38,13 +39,14 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 * `aws_ami_user`: The user for the AMI you're using. Example: `centos`
 * `aws_ami_id`: The AWS id of the AMI. Default: `ami-45844401` [CentOS 6 (x86_64) - with Updates HVM (us-west-1)](https://aws.amazon.com/marketplace/pp/B00NQAYLWO)
 * `aws_flavor`: The AWS instance type. Default: `c3.xlarge`
-* `chef_org`: The CHEF Server organization
+* `chef_org_short`: The CHEF Server organization
 * `chef_server_url`: The CHEF Server's URL.
-* `chef_delivery_name`: The AWS tag for Name. Default: `chef-delivery` will result in a Name tag of `${var.chef_delivery_name}-${var.chef_delivery_count}-${var.chef_org}`
-* `chef_delivery_enterprise`: Delivery uses an Enterprise that supports multiple Organizations. Default `Example`
-* `chef_delivery_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
-* `chef_delivery_username`: The first delivery user to create. Default `example`
-* `chef_delivery_license`: Path to the `delivery.license` file
+* `chef_server_public_dns`: The DNS address of the CHEF Server
+* `delivery_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
+* `delivery_basename`: The AWS tag for Name. Default: `chef-delivery` will result in a Name tag of `${var.chef_delivery_name}-${var.chef_delivery_count}-${var.chef_org}`
+* `enterprise`: Delivery uses an Enterprise that supports multiple Organizations. Default `Example`
+* `username`: The first delivery user to create. Default `example`
+* `license_file`: Path to the `delivery.license` file
 
 ## Outputs
 
