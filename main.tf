@@ -53,7 +53,6 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
   security_group_id = "${aws_security_group.chef-delivery.id}"
 }
 # CHEF Delivery
-# Provision Delivery
 resource "aws_instance" "chef-delivery" {
   ami = "${var.aws_ami_id}"
   instance_type = "${var.aws_flavor}"
@@ -61,7 +60,7 @@ resource "aws_instance" "chef-delivery" {
   vpc_security_group_ids = ["${aws_security_group.chef-delivery.id}"]
   key_name = "${var.aws_key_name}"
   tags = {
-    Name = "${format("%s-%02d-%s", var.chef_delivery_name, count.index + 1, var.chef_org)}"
+    Name = "${format("%s-%02d-%s", var.delivery_basename, count.index + 1, var.chef_org_short)}"
   }
   root_block_device = {
     delete_on_termination = true
@@ -70,17 +69,42 @@ resource "aws_instance" "chef-delivery" {
     user = "${var.aws_ami_user}"
     private_key = "${var.aws_private_key_file}"
   }
+  provisioner "remote-exec" {
+    connection {
+      user = "${var.aws_ami_user}"
+      private_key = "${var.aws_private_key_file}"
+      host = "${var.chef_server_public_dns}"
+    }
+    inline = [
+      "echo 'Adding ${var.username}' to CHEF Server",
+      "sudo chef-server-ctl user-create ${var.username} Delivery User delivery@domain.tld ${base64encode(self.id)} -f /tmp/.chef/keys/${var.username}.pem",
+      "sudo chef-server-ctl org-user-add ${var.chef_org_short} ${var.username}",
+      "echo Prepared for Delivery provisioning"
+    ]
+  }
+  provisioner "local-exec" {
+    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_public_dns}:/tmp/.chef/keys/${var.username}.pem ${path.cwd}/.chef/keys/${var.username}.pem"
+  }
   # Ugly PERL hack because you can't source file() unless it exists before runtime
   # https://github.com/hashicorp/terraform/issues/3354
   provisioner "local-exec" {
     command = <<EOF
-cd ${path.cwd}/.chef
-cat > delivery_builder_keys <<EOK
+mkdir -p ${path.cwd}/.chef/keys
+cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
+{
 "id": "delivery_builder_keys",
 "builder_key": "BUILDER_KEY",
-"delivery_pem": "${path.cwd}/.chef/${var.chef_delivery_username}.pem"
+"delivery_pem": "${path.cwd}/.chef/keys/${var.username}.pem"
+}
 EOK
-perl -pe 's/BUILDER_KEY/`cat builder_key`/ge' -i ${path.cwd}/.chef/delivery_builder_keys
+ssh-keygen -t rsa -N '' -b 2048 -f .chef/keys/builder_key
+perl -pe 's/BUILDER_KEY/`cat builder_key`/ge' -i delivery_builder_keys
+mv delivery_builder_keys ${path.cwd}/.chef
+# Encryption key
+openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/keys/encrypted_data_bag_secret
+# Create the data-bag keys
+knife data bag create keys 
+knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/keys/encrypted_data_bag_secret
 EOF
   }
   provisioner "file" {
@@ -125,12 +149,12 @@ EOF
     ]
   }
   provisioner "file" {
-    source = "${var.chef_delivery_license}"
-    destination = "/tmp/delivery.license"
+    source = "${var.license_file}"
+    destination = "/tmp/.chef/delivery.license"
   }
   provisioner "remote-exec" {
     inline = [
-      "sudo mv /tmp/delivery.license /var/opt/delivery/license/",
+      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license/",
       "sudo chown root:root /var/opt/delivery/license/delivery.license"
     ]
   }
@@ -145,21 +169,21 @@ EOF
     }
     # environment = "_default"
     run_list = ["delivery-cluster::delivery"]
-    node_name = "${format("%s-%02d-%s", var.chef_delivery_name, count.index + 1, var.chef_delivery_enterprise)}"
+    node_name = "${format("%s-%02d-%s", var.delivery_basename, count.index + 1, var.enterprise)}"
     secret_key = "${path.cwd}/.chef/encrypted_data_bag_secret"
     server_url = "${var.chef_server_url}"
-    validation_client_name = "${var.chef_org}-validator"
-    validation_key = "${file("${path.cwd}/.chef/${var.chef_org}-validator.pem")}"
+    validation_client_name = "${var.chef_org_short}-validator"
+    validation_key = "${file("${path.cwd}/.chef/keys/${var.chef_org_short}-validator.pem")}"
   }
   provisioner "remote-exec" {
     inline = [
       "sudo chown -R ${var.aws_ami_user} /tmp/.chef",
-      "sudo delivery-ctl create-enterprise ${var.chef_delivery_enterprise} --ssh-pub-key-file=/etc/delivery/builder_key.pub > /tmp/.chef/${var.chef_delivery_enterprise}.creds",
+      "sudo delivery-ctl create-enterprise ${var.enterprise} --ssh-pub-key-file=/etc/delivery/builder_key.pub > /tmp/.chef/${var.enterprise}.creds",
       "sudo chown -R ${var.aws_ami_user} /tmp/.chef"
     ]
   }
   provisioner "local-exec" {
-    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_ip}:/tmp/.chef/${var.chef_delivery_enterprise}.creds ${path.cwd}/.chef/${var.chef_delivery_enterprise}.creds"
+    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_ip}:/tmp/.chef/${var.enterprise}.creds ${path.cwd}/.chef/${var.enterprise}.creds"
   }
 }
 

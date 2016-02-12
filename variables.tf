@@ -2,8 +2,6 @@
 variable "boolean_lookup" {
   description = "Conversion of boolean truth"
   default = {
-    "true" = 1
-    "false" = 0
     "0" = 0
     "1" = 1
   }
@@ -43,29 +41,32 @@ variable "aws_region" {
   default = "us-west-1"
 }
 # tf_chef_delivery_server specific configs
-variable "chef_delivery_count" {
+variable "delivery_count" {
   description = "Number of CHEF Delivery servers to provision. DO NOT CHANGE!"
   default = 1
 }
-variable "chef_delivery_name" {
+variable "delivery_basename" {
   description = "Basename for AWS Name tag of CHEF Delivery server"
   default = "chef-delivery"
 }
-variable "chef_delivery_enterprise" {
+variable "enterprise" {
   description = "Name of the CHEF Delivery enterprise to create"
   default = "Example"
 }
-variable "chef_delivery_username" {
+variable "username" {
   description = "Username of the first CHEF Delivery user"
-  default = "example"
+  default = "delivery"
 }
-variable "chef_delivery_license" {
+variable "license_file" {
   description = "Path to CHEF Delivery license file"
 }
 variable "chef_server_url" {
   Description = "The CHEF Server URL to use for the CHEF provisioner"
 }
-variable "chef_org" {
+variable "chef_server_public_dns" {
+  description = "The DNS address of the CHEF Server"
+}
+variable "chef_org_short" {
   description = "Short CHEF Server organization name (lowercase alphanumeric characters only)"
 }
 
