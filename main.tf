@@ -69,6 +69,9 @@ resource "aws_instance" "chef-delivery" {
     user = "${var.aws_ami_user}"
     private_key = "${var.aws_private_key_file}"
   }
+  provisioner "local-exec" {
+    command = "mkdir -p ${path.cwd}/.chef/keys"
+  }
   provisioner "remote-exec" {
     connection {
       user = "${var.aws_ami_user}"
@@ -89,7 +92,6 @@ resource "aws_instance" "chef-delivery" {
   # https://github.com/hashicorp/terraform/issues/3354
   provisioner "local-exec" {
     command = <<EOF
-mkdir -p ${path.cwd}/.chef/keys
 cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 {
 "id": "delivery_builder_keys",
@@ -97,9 +99,13 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 "delivery_pem": "${path.cwd}/.chef/keys/${var.username}.pem"
 }
 EOK
-ssh-keygen -t rsa -N '' -b 2048 -f .chef/keys/builder_key
-perl -pe 's/BUILDER_KEY/`cat builder_key`/ge' -i delivery_builder_keys
-mv delivery_builder_keys ${path.cwd}/.chef
+ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/keys/builder_key
+cd ${path.cwd}/.chef/keys
+cp builder_key builder_key_databag
+perl -pe 's/\n/\\n/g' -i builder_key_databag
+perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
+rm builder_key_databag
+cd ../..
 # Encryption key
 openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/keys/encrypted_data_bag_secret
 # Create the data-bag keys
@@ -107,9 +113,15 @@ knife data bag create keys
 knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/keys/encrypted_data_bag_secret
 EOF
   }
+  # Copy over .chef to /tmp
   provisioner "file" {
     source = "${path.cwd}/.chef"
     destination = "/tmp"
+  }
+  # Copy in license file
+  provisioner "file" {
+    source = "${var.license_file}"
+    destination = "/tmp/.chef/delivery.license"
   }
   # Basic Setup
   provisioner "remote-exec" {
@@ -137,25 +149,21 @@ EOF
       "sudo service iptables restart"
     ]
   }
-  # Setup Packages
+  # Setup
   provisioner "remote-exec" {
     inline = [
       "[ -x /usr/sbin/apt-get ] && sudo apt-get install -y git || sudo yum install -y git",
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef",
-      "sudo chown -R root:root /tmp/.chef",
+      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
       "sudo mv /tmp/.chef/* /etc/delivery/",
+      "sudo mv /etc/delivery/keys/${var.username}.pem /etc/delivery",
+      "sudo mv /etc/delivery/keys/encrypted_data_bag_secret /etc/delivery",
+      "sudo mv /etc/delivery/keys/${var.chef_org_short}-validator.pem /etc/delivery",
+      "sudo mv /etc/delivery/keys/builder* /etc/delivery",
+      "sudo rm -rf /etc/delivery/keys",
       "sudo mv /etc/delivery/trusted_certs /etc/chef/",
+      "sudo chown -R root:root /etc/delivery /etc/chef /var/opt/delivery",
       "echo Prepared for Chef Provisioner run"
-    ]
-  }
-  provisioner "file" {
-    source = "${var.license_file}"
-    destination = "/tmp/.chef/delivery.license"
-  }
-  provisioner "remote-exec" {
-    inline = [
-      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license/",
-      "sudo chown root:root /var/opt/delivery/license/delivery.license"
     ]
   }
   provisioner "chef" {
