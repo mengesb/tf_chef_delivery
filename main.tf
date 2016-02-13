@@ -109,8 +109,8 @@ cp builder_key.pem builder_key_databag
 cp ${var.username}.pem ${var.username}_pem_databag
 perl -pe 's/\n/\\n/g' -i builder_key_databag
 perl -pe 's/\n/\\n/g' -i ${var.username}_pem_databag
-perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
-perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i ${path.cwd}/.chef/delivery_builder_keys.json
+perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ../delivery_builder_keys.json
+perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i ../delivery_builder_keys.json
 rm builder_key_databag ${var.username}_pem_databag
 cd ../..
 # Create the data-bag keys
@@ -160,12 +160,9 @@ EOF
       "[ -x /usr/sbin/apt-get ] && sudo apt-get install -y git || sudo yum install -y git",
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef",
       "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
-      "sudo mv /tmp/.chef/* /etc/delivery/",
-      "sudo mv /etc/delivery/keys/${var.username}.pem /etc/delivery",
-      "sudo mv /etc/delivery/keys/encrypted_data_bag_secret /etc/delivery",
-      "sudo mv /etc/delivery/keys/${var.chef_org_short}-validator.pem /etc/delivery",
-      "sudo mv /etc/delivery/keys/builder* /etc/delivery",
-      "sudo rm -rf /etc/delivery/keys",
+      "sudo cp -R /tmp/.chef/* /etc/delivery/",
+      "sudo cp -R /tmp/.chef/keys/* /etc/delivery/",
+      "sudo cp -R /tmp/.chef/* /etc/chef/",
       "sudo mv /etc/delivery/trusted_certs /etc/chef/",
       "sudo chown -R root:root /etc/delivery /etc/chef /var/opt/delivery",
       "echo Prepared for Chef Provisioner run"
@@ -183,7 +180,7 @@ EOF
     # environment = "_default"
     run_list = ["delivery-cluster::delivery"]
     node_name = "${format("%s-%02d-%s", var.delivery_basename, count.index + 1, var.enterprise)}"
-    secret_key = "${path.cwd}/.chef/encrypted_data_bag_secret"
+    # secret_key = "${file("${path.cwd}/.chef/keys/encrypted_data_bag_secret")}"
     server_url = "${var.chef_server_url}"
     validation_client_name = "${var.chef_org_short}-validator"
     validation_key = "${file("${path.cwd}/.chef/keys/${var.chef_org_short}-validator.pem")}"
