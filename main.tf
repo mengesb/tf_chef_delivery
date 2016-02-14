@@ -7,6 +7,24 @@ resource "aws_security_group" "chef-delivery" {
     Name = "chef-delivery security group"
   }
 }
+# Allow all from CHEF Server
+resource "aws_security_group_rule" "chef-delivery_allow_all_chef-server" {
+  type = "ingress"
+  from_port = 0
+  to_port = 65535
+  protocol = "-1"
+  source_security_group_id = "${var.chef_server_sg}"
+  security_group_id = "${aws_security_group.chef-delivery.id}"
+}
+# Allow all from CHEF Delivery to CHEF Server
+resource "aws_security_group_rule" "chef-server_allow_all_chef-delivery" {
+  type = "ingress"
+  from_port = 0
+  to_port = 65535
+  protocol = "-1"
+  source_security_group_id = "${aws_security_group.chef-delivery.id}"
+  security_group_id = "${var.chef_server_sg}"
+}
 # SSH - all
 resource "aws_security_group_rule" "chef-delivery_allow_22_tcp_all" {
   type = "ingress"
@@ -100,7 +118,6 @@ knife data bag create keys
 knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/encrypted_data_bag_secret
 EOF
   }
-
 }
 # CHEF Delivery
 resource "aws_instance" "chef-delivery" {
@@ -111,7 +128,7 @@ resource "aws_instance" "chef-delivery" {
   vpc_security_group_ids = ["${aws_security_group.chef-delivery.id}"]
   key_name = "${var.aws_key_name}"
   tags = {
-    Name = "${format("%s-%02d-%s", var.basename, count.index + 1, var.chef_org_short)}"
+    Name = "${format("%s-%02d", var.basename, count.index + 1)}"
   }
   root_block_device = {
     delete_on_termination = true
