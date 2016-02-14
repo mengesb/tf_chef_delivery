@@ -1,7 +1,26 @@
-## Outputs
-output "chef_delivery_creds" {
-  value = "${file(".chef/${var.enterprise}.creds")}"
+# Outputs
+output "id" {
+  value = "${aws_instance.chef-delivery.id}"
 }
-output "chef_delivery_sg" {
+output "security_group_id" {
   value = "${aws_security_group.chef-delivery.id}"
+}
+output "public_ip" {
+  value = "${aws_instance.chef-delivery.public_ip}"
+}
+output "public_dns" {
+  value = "${aws_instance.chef-delivery.public_dns}"
+}
+# In creds
+#output "enterprise" {
+#  value = "${var.enterprise}"
+#}
+output "delivery_creds" {
+  value = "\n${file(".chef/${var.enterprise}.creds")}"
+}
+output "security_group_id" {
+  value = "${aws_security_group.chef-delivery.id}"
+}
+output "encrypted_data_bag_secret" {
+  value = "${file("${path.cwd}/.chef/encrypted_data_bag_secret")}"
 }

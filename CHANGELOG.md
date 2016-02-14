@@ -1,3 +1,9 @@
+v0.1.1 (2016-02-14)
+-------------------
+- Fixing databag issues
+- Remove org from name tag
+- Adding security group rules between server and delivery
+
 v0.1.0 (2016-02-11)
 -------------------
 - Made delivery less directly dependent on tf_chef_server

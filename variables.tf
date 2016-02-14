@@ -41,11 +41,11 @@ variable "aws_region" {
   default = "us-west-1"
 }
 # tf_chef_delivery_server specific configs
-variable "delivery_count" {
+variable "count" {
   description = "Number of CHEF Delivery servers to provision. DO NOT CHANGE!"
   default = 1
 }
-variable "delivery_basename" {
+variable "basename" {
   description = "Basename for AWS Name tag of CHEF Delivery server"
   default = "chef-delivery"
 }
@@ -57,11 +57,12 @@ variable "username" {
   description = "Username of the first CHEF Delivery user"
   default = "delivery"
 }
+variable "ssh_cidrs" {
+  description = "List of CIDRs to allow SSH from"
+  default = "0.0.0.0/0"
+}
 variable "license_file" {
   description = "Path to CHEF Delivery license file"
-}
-variable "chef_server_url" {
-  Description = "The CHEF Server URL to use for the CHEF provisioner"
 }
 variable "chef_server_public_dns" {
   description = "The DNS address of the CHEF Server"
@@ -69,4 +70,6 @@ variable "chef_server_public_dns" {
 variable "chef_org_short" {
   description = "Short CHEF Server organization name (lowercase alphanumeric characters only)"
 }
-
+variable "chef_server_sg" {
+  description = "CHEF Server security group id"
+}
