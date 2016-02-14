@@ -57,6 +57,10 @@ variable "username" {
   description = "Username of the first CHEF Delivery user"
   default = "delivery"
 }
+variable "ssh_cidrs" {
+  description = "List of CIDRs to allow SSH from"
+  default = "0.0.0.0/0"
+}
 variable "license_file" {
   description = "Path to CHEF Delivery license file"
 }
