@@ -41,11 +41,11 @@ variable "aws_region" {
   default = "us-west-1"
 }
 # tf_chef_delivery_server specific configs
-variable "delivery_count" {
+variable "count" {
   description = "Number of CHEF Delivery servers to provision. DO NOT CHANGE!"
   default = 1
 }
-variable "delivery_basename" {
+variable "basename" {
   description = "Basename for AWS Name tag of CHEF Delivery server"
   default = "chef-delivery"
 }
@@ -59,9 +59,6 @@ variable "username" {
 }
 variable "license_file" {
   description = "Path to CHEF Delivery license file"
-}
-variable "chef_server_url" {
-  Description = "The CHEF Server URL to use for the CHEF provisioner"
 }
 variable "chef_server_public_dns" {
   description = "The DNS address of the CHEF Server"
