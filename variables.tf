@@ -66,4 +66,6 @@ variable "chef_server_public_dns" {
 variable "chef_org_short" {
   description = "Short CHEF Server organization name (lowercase alphanumeric characters only)"
 }
-
+variable "chef_server_sg" {
+  description = "CHEF Server security group id"
+}
