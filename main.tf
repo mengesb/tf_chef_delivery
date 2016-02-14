@@ -201,7 +201,7 @@ resource "aws_instance" "chef-delivery" {
     }
     # environment = "_default"
     run_list = ["delivery-cluster::delivery"]
-    node_name = "${format("%s-%02d-%s", var.basename, count.index + 1, var.enterprise)}"
+    node_name = "${format("%s-%02d", var.basename, count.index + 1)}"
     server_url = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
     validation_client_name = "${var.chef_org_short}-validator"
     validation_key = "${file("${path.cwd}/.chef/${var.chef_org_short}-validator.pem")}"
