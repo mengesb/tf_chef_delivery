@@ -52,26 +52,8 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
   cidr_blocks = ["0.0.0.0/0"]
   security_group_id = "${aws_security_group.chef-delivery.id}"
 }
-# CHEF Delivery
-resource "aws_instance" "chef-delivery" {
-  ami = "${var.aws_ami_id}"
-  instance_type = "${var.aws_flavor}"
-  subnet_id = "${var.aws_subnet_id}"
-  vpc_security_group_ids = ["${aws_security_group.chef-delivery.id}"]
-  key_name = "${var.aws_key_name}"
-  tags = {
-    Name = "${format("%s-%02d-%s", var.delivery_basename, count.index + 1, var.chef_org_short)}"
-  }
-  root_block_device = {
-    delete_on_termination = true
-  }
-  connection {
-    user = "${var.aws_ami_user}"
-    private_key = "${var.aws_private_key_file}"
-  }
-  provisioner "local-exec" {
-    command = "mkdir -p ${path.cwd}/.chef/keys"
-  }
+# CHEF Delivery requirements
+resource "null_resource" "chef-delivery-requirements" {
   provisioner "remote-exec" {
     connection {
       user = "${var.aws_ami_user}"
@@ -80,13 +62,13 @@ resource "aws_instance" "chef-delivery" {
     }
     inline = [
       "echo 'Adding ${var.username}' to CHEF Server",
-      "sudo chef-server-ctl user-create ${var.username} Delivery User delivery@domain.tld ${base64encode(self.id)} -f /tmp/.chef/keys/${var.username}.pem",
+      "sudo chef-server-ctl user-create ${var.username} Delivery User delivery@domain.tld ${base64encode(self.id)} -f /tmp/.chef/${var.username}.pem",
       "sudo chef-server-ctl org-user-add ${var.chef_org_short} ${var.username}",
       "echo Prepared for Delivery provisioning"
     ]
   }
   provisioner "local-exec" {
-    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_public_dns}:/tmp/.chef/keys/${var.username}.pem ${path.cwd}/.chef/keys/${var.username}.pem"
+    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_public_dns}:/tmp/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}.pem"
   }
   # Ugly PERL hack because you can't source file() unless it exists before runtime
   # https://github.com/hashicorp/terraform/issues/3354
@@ -100,23 +82,46 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 }
 EOK
 # Encryption key
-openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/keys/encrypted_data_bag_secret
+openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/encrypted_data_bag_secret
 # SSH Keys
-ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/keys/builder_key
-ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/keys/builder_key.pem
-cd ${path.cwd}/.chef/keys
+ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/builder_key
+ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/builder_key.pem
+cd ${path.cwd}/.chef
 cp builder_key.pem builder_key_databag
 cp ${var.username}.pem ${var.username}_pem_databag
 perl -pe 's/\n/\\n/g' -i builder_key_databag
 perl -pe 's/\n/\\n/g' -i ${var.username}_pem_databag
-perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i ../delivery_builder_keys.json
-perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i ../delivery_builder_keys.json
+perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i delivery_builder_keys.json
+perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i delivery_builder_keys.json
 rm builder_key_databag ${var.username}_pem_databag
-cd ../..
+cd ..
 # Create the data-bag keys
 knife data bag create keys 
-knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/keys/encrypted_data_bag_secret
+knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/encrypted_data_bag_secret
 EOF
+  }
+
+}
+# CHEF Delivery
+resource "aws_instance" "chef-delivery" {
+  ami = "${var.aws_ami_id}"
+  count = "${var.count}"
+  instance_type = "${var.aws_flavor}"
+  subnet_id = "${var.aws_subnet_id}"
+  vpc_security_group_ids = ["${aws_security_group.chef-delivery.id}"]
+  key_name = "${var.aws_key_name}"
+  tags = {
+    Name = "${format("%s-%02d-%s", var.basename, count.index + 1, var.chef_org_short)}"
+  }
+  root_block_device = {
+    delete_on_termination = true
+  }
+  connection {
+    user = "${var.aws_ami_user}"
+    private_key = "${var.aws_private_key_file}"
+  }
+  provisioner "local-exec" {
+    command = "mkdir -p ${path.cwd}/.chef"
   }
   # Copy over .chef to /tmp
   provisioner "file" {
@@ -161,7 +166,7 @@ EOF
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef",
       "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
       "sudo cp -R /tmp/.chef/* /etc/delivery/",
-      "sudo cp -R /tmp/.chef/keys/* /etc/delivery/",
+      "sudo cp -R /tmp/.chef/* /etc/delivery/",
       "sudo cp -R /tmp/.chef/* /etc/chef/",
       "sudo mv /etc/delivery/trusted_certs /etc/chef/",
       "sudo chown -R root:root /etc/delivery /etc/chef /var/opt/delivery",
@@ -172,18 +177,17 @@ EOF
     attributes {
       "delivery-cluster" {
         "delivery" {
-          "chef_server" = "${var.chef_server_url}"
+          "chef_server" = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
           "fqdn" = "${self.public_dns}"
         }
       }
     }
     # environment = "_default"
     run_list = ["delivery-cluster::delivery"]
-    node_name = "${format("%s-%02d-%s", var.delivery_basename, count.index + 1, var.enterprise)}"
-    # secret_key = "${file("${path.cwd}/.chef/keys/encrypted_data_bag_secret")}"
-    server_url = "${var.chef_server_url}"
+    node_name = "${format("%s-%02d-%s", var.basename, count.index + 1, var.enterprise)}"
+    server_url = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
     validation_client_name = "${var.chef_org_short}-validator"
-    validation_key = "${file("${path.cwd}/.chef/keys/${var.chef_org_short}-validator.pem")}"
+    validation_key = "${file("${path.cwd}/.chef/${var.chef_org_short}-validator.pem")}"
   }
   provisioner "remote-exec" {
     inline = [

@@ -1,10 +1,10 @@
 ## Outputs
-output "chef_delivery_sg" {
+output "delivery_creds" {
+  value = "\n${file(".chef/${var.enterprise}.creds")}"
+}
+output "delivery_sg" {
   value = "${aws_security_group.chef-delivery.id}"
 }
-output "chef_delivery_url" {
-  value = "https://${aws_instance.chef-delivery.public_dns}/e/${var.enterprise}"
-}
-output "chef_delivery_creds" {
-  value = "${file(".chef/${var.enterprise}.creds")}"
+output "encrypted_data_bag_secret" {
+  value = "${file("${path.cwd}/.chef/encrypted_data_bag_secret")}"
 }
