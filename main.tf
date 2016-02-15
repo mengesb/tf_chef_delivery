@@ -99,8 +99,6 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 "delivery_pem": "DELIVERY_PEM"
 }
 EOK
-# Encryption key
-openssl rand -base64 512 | tr -d '\r\n' > ${path.cwd}/.chef/encrypted_data_bag_secret
 # SSH Keys
 ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/builder_key
 ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/builder_key.pem
@@ -115,7 +113,7 @@ rm builder_key_databag ${var.username}_pem_databag
 cd ..
 # Create the data-bag keys
 knife data bag create keys 
-knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${path.cwd}/.chef/encrypted_data_bag_secret
+knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
 EOF
   }
 }
@@ -202,6 +200,7 @@ resource "aws_instance" "chef-delivery" {
     # environment = "_default"
     run_list = ["delivery-cluster::delivery"]
     node_name = "${format("%s-%02d", var.basename, count.index + 1)}"
+    secret_key = "${file("${var.secret_key_file}")}"
     server_url = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
     validation_client_name = "${var.chef_org_short}-validator"
     validation_key = "${file("${path.cwd}/.chef/${var.chef_org_short}-validator.pem")}"
