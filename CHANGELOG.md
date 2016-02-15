@@ -1,3 +1,7 @@
+v0.1.3 (2016-02-15)
+-------------------
+- Breaking out key generation
+
 v0.1.2 (2016-02-15)
 -------------------
 - Documentation cleanup and consisteny with other tf_chef works
