@@ -90,11 +90,10 @@ resource "null_resource" "chef-delivery-requirements" {
   provisioner "local-exec" {
     command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_dns}:/tmp/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}.pem"
   }
-  # Generate data bag for delivery build servers
-  # Ugly PERL hack because you can't source file() unless it exists before runtime
-  # https://github.com/hashicorp/terraform/issues/3354
+  # Create JSON file for databag
   provisioner "local-exec" {
     command = <<EOF
+rm -f ${path.cwd}/.chef/delivery_builder_keys.json
 cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 {
 "id": "delivery_builder_keys",
@@ -102,20 +101,41 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 "delivery_pem": "DELIVERY_PEM"
 }
 EOK
-# SSH Keys
-ssh-keygen -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/builder_key
-ssh-keygen -f builder_key -e -m pem > ${path.cwd}/.chef/builder_key.pem
-cd ${path.cwd}/.chef
-cp builder_key.pem builder_key_databag
-cp ${var.username}.pem ${var.username}_pem_databag
+EOF
+  }
+  # Generate build user ssh key pair
+  provisioner "local-exec" {
+    command = <<EOF
+rm -f ${path.cwd}/.chef/builder_key ${path.cwd}/.chef/builder_key.pub ${path.cwd}/.chef/builder_key.pem
+ssh-keygen -q -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/builder_key
+[ -f ${path.cwd}/.chef/builder_key ] && echo 'builder_key generated' || echo 'builder_key missing'
+ssh-keygen -q -f builder_key -e -m 'PEM' > ${path.cwd}/.chef/builder_key.pem
+[ -f ${path.cwd}/.chef/builder_key.pem ] && echo 'builder_key.pem generated' || echo 'builder_key.pem missing'
+EOF
+  }
+  # Create editable files for databag
+  provisioner "local-exec" {
+    command = <<EOF
+rm -f ${path.cwd}/.chef/builder_key_databag ${path.cwd}/.chef/${var.username}_key_databag
+cp ${path.cwd}/.chef/builder_key.pem ${path.cwd}/.chef/builder_key_databag
+cp ${path.cwd}/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}_key_databag
 perl -pe 's/\n/\\n/g' -i builder_key_databag
-perl -pe 's/\n/\\n/g' -i ${var.username}_pem_databag
+perl -pe 's/\n/\\n/g' -i ${var.username}_key_databag
+EOF
+  }
+  # Generate data bag for delivery build servers
+  # Ugly PERL hack because https://github.com/hashicorp/terraform/issues/3354
+  provisioner "local-exec" {
+    command = <<EOF
+cd ${path.cwd}/.chef
 perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i delivery_builder_keys.json
-perl -pe 's/DELIVERY_PEM/`cat ${var.username}_pem_databag`/ge' -i delivery_builder_keys.json
-rm builder_key_databag ${var.username}_pem_databag
-cd ..
-# Create the data-bag keys
-knife data bag create keys 
+perl -pe 's/DELIVERY_PEM/`cat ${var.username}_key_databag`/ge' -i delivery_builder_keys.json
+EOF
+  }
+  # Create the data-bag keys
+  provisioner "local-exec" {
+    command = <<EOF
+knife data bag create keys
 knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
 EOF
   }
