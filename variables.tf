@@ -73,3 +73,6 @@ variable "chef_org_short" {
 variable "chef_server_sg" {
   description = "CHEF Server security group id"
 }
+variable "secret_key_file" {
+  description = "Encrypted data bag secret file"
+}
