@@ -29,6 +29,8 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 
 ## Input variables
 
+### AWS variables
+
 * `aws_access_key`: Your AWS key, usually referred to as `AWS_ACCESS_KEY_ID`
 * `aws_secret_key`: Your secret for your AWS key, usually referred to as `AWS_SECRET_ACCESS_KEY`
 * `aws_region`: AWS region you want to deploy to. Default: `us-west-1`
@@ -39,18 +41,27 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 * `aws_ami_user`: The user for the AMI you're using. Example: `centos`
 * `aws_ami_id`: The AWS id of the AMI. Default: `ami-45844401` [CentOS 6 (x86_64) - with Updates HVM (us-west-1)](https://aws.amazon.com/marketplace/pp/B00NQAYLWO)
 * `aws_flavor`: The AWS instance type. Default: `c3.xlarge`
-* `chef_org_short`: The CHEF Server organization
-* `chef_server_url`: The CHEF Server's URL.
-* `chef_server_public_dns`: The DNS address of the CHEF Server
-* `delivery_count`: The number of AWS instances to deploy. Deafult: `1`, DO NOT CHANGE!
-* `delivery_basename`: The AWS tag for Name. Default: `chef-delivery` will result in a Name tag of `${var.chef_delivery_name}-${var.chef_delivery_count}-${var.chef_org}`
-* `enterprise`: Delivery uses an Enterprise that supports multiple Organizations. Default `Example`
-* `username`: The first delivery user to create. Default `example`
+
+### tf_chef_delivery variables
+
+* `basename`: Delivery server's basename. Default: `chef-delivery`
+* `count`: Delivery server count. Deafult: `1`, DO NOT CHANGE!
+* `enterprise`: Delivery enterprise to create. Default `Terraform`
+* `username`: Delivery username on CHEF Server. Default `delivery`
+* `user_firstname`: Delivery user first name. Default `Delivery`
+* `user_lastname`: Delivery user last name. Default `User`
+* `ssh_cidrs`: The comma seperated list of addresses in CIDR format to allow SSH access. Default `0.0.0.0/0`
 * `license_file`: Path to the `delivery.license` file
+* `chef_server_dns`: DNS address of the CHEF Server
+* `chef_org_short`: CHEF Server organization.
+* `chef_server_sg`: CHEF Server security group id.
+* `secret_key_file`: Encrypted data bag secret file.
 
 ## Outputs
 
-* `chef_delivery_creds`: CHEF Delivery credentials with useful login information
+* `delivery_creds`: CHEF Delivery credentials with useful login information
+* `public_dns`: DNS address of the CHEF Delivery instance.
+* `security_group_id`: The AWS security group id for this instance.
 
 ## Contributors
 

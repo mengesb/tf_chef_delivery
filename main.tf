@@ -72,22 +72,25 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
 }
 # CHEF Delivery requirements
 resource "null_resource" "chef-delivery-requirements" {
+  # Create CHEF Delivery user on CHEF Server
   provisioner "remote-exec" {
     connection {
       user = "${var.aws_ami_user}"
       private_key = "${var.aws_private_key_file}"
-      host = "${var.chef_server_public_dns}"
+      host = "${var.chef_server_dns}"
     }
     inline = [
       "echo 'Adding ${var.username}' to CHEF Server",
-      "sudo chef-server-ctl user-create ${var.username} Delivery User delivery@domain.tld ${base64encode(self.id)} -f /tmp/.chef/${var.username}.pem",
+      "sudo chef-server-ctl user-create ${var.username} ${var.user_firstname} ${var.user_lastname} ${var.user_email} ${base64encode(self.id)} -f /tmp/.chef/${var.username}.pem",
       "sudo chef-server-ctl org-user-add ${var.chef_org_short} ${var.username}",
       "echo Prepared for Delivery provisioning"
     ]
   }
+  # Copy back Delivery user pem
   provisioner "local-exec" {
-    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_public_dns}:/tmp/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}.pem"
+    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${var.chef_server_dns}:/tmp/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}.pem"
   }
+  # Generate data bag for delivery build servers
   # Ugly PERL hack because you can't source file() unless it exists before runtime
   # https://github.com/hashicorp/terraform/issues/3354
   provisioner "local-exec" {
@@ -135,20 +138,40 @@ resource "aws_instance" "chef-delivery" {
     user = "${var.aws_ami_user}"
     private_key = "${var.aws_private_key_file}"
   }
-  provisioner "local-exec" {
-    command = "mkdir -p ${path.cwd}/.chef"
+  #provisioner "local-exec" {
+  #  command = "mkdir -p ${path.cwd}/.chef"
+  #}
+  ## Copy over .chef to /tmp
+  #provisioner "file" {
+  #  source = "${path.cwd}/.chef"
+  #  destination = "/tmp"
+  #}
+  # Create path to delivery license
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p /tmp/.chef",
+      "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef"
+    ]
   }
-  # Copy over .chef to /tmp
+  # Copy over trusted certificates
   provisioner "file" {
-    source = "${path.cwd}/.chef"
-    destination = "/tmp"
+    source = "${path.cwd}/.chef/trusted_certs"
+    destination = "/tmp/.chef"
   }
   # Copy in license file
   provisioner "file" {
     source = "${var.license_file}"
     destination = "/tmp/.chef/delivery.license"
   }
-  # Basic Setup
+  # Put files in proper locations
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
+      "sudo mv /tmp/.chef/trusted_certs /etc/chef",
+      "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
+    ]
+  }
+  # Hostname setup
   provisioner "remote-exec" {
     inline = [
       "EC2IPV4=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)",
@@ -161,7 +184,12 @@ resource "aws_instance" "chef-delivery" {
       "echo ${self.public_dns}|sed 's/\\..*//' > /tmp/hostname",
       "sudo chown root:root /tmp/hostname",
       "[ -f /etc/sysconfig/network ] && sudo sed -i 's/^HOSTNAME.*/HOSTNAME=${self.public_dns}/' /etc/sysconfig/network || sudo cp /tmp/hostname /etc/hostname",
-      "sudo rm /tmp/hostname",
+      "sudo rm /tmp/hostname"
+    ]
+  }
+  # Handle iptables
+  provisioner "remote-exec" {
+    inline = [
       "sudo iptables -F",
       "sudo iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT",
       "sudo iptables -A INPUT -p icmp -j ACCEPT",
@@ -174,25 +202,12 @@ resource "aws_instance" "chef-delivery" {
       "sudo service iptables restart"
     ]
   }
-  # Setup
-  provisioner "remote-exec" {
-    inline = [
-      "[ -x /usr/sbin/apt-get ] && sudo apt-get install -y git || sudo yum install -y git",
-      "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef",
-      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
-      "sudo cp -R /tmp/.chef/* /etc/delivery/",
-      "sudo cp -R /tmp/.chef/* /etc/delivery/",
-      "sudo cp -R /tmp/.chef/* /etc/chef/",
-      "sudo mv /etc/delivery/trusted_certs /etc/chef/",
-      "sudo chown -R root:root /etc/delivery /etc/chef /var/opt/delivery",
-      "echo Prepared for Chef Provisioner run"
-    ]
-  }
+  # Provision with CHEF
   provisioner "chef" {
     attributes {
       "delivery-cluster" {
         "delivery" {
-          "chef_server" = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
+          "chef_server" = "https://${var.chef_server_dns}/organizations/${var.chef_org_short}"
           "fqdn" = "${self.public_dns}"
         }
       }
@@ -201,10 +216,11 @@ resource "aws_instance" "chef-delivery" {
     run_list = ["delivery-cluster::delivery"]
     node_name = "${format("%s-%02d", var.basename, count.index + 1)}"
     secret_key = "${file("${var.secret_key_file}")}"
-    server_url = "https://${var.chef_server_public_dns}/organizations/${var.chef_org_short}"
+    server_url = "https://${var.chef_server_dns}/organizations/${var.chef_org_short}"
     validation_client_name = "${var.chef_org_short}-validator"
     validation_key = "${file("${path.cwd}/.chef/${var.chef_org_short}-validator.pem")}"
   }
+  # Generate CHEF Delivery enterprise credentials file
   provisioner "remote-exec" {
     inline = [
       "sudo chown -R ${var.aws_ami_user} /tmp/.chef",
@@ -212,6 +228,7 @@ resource "aws_instance" "chef-delivery" {
       "sudo chown -R ${var.aws_ami_user} /tmp/.chef"
     ]
   }
+  # Copy back CHEF Delivery enterprise credentials file
   provisioner "local-exec" {
     command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_ip}:/tmp/.chef/${var.enterprise}.creds ${path.cwd}/.chef/${var.enterprise}.creds"
   }
