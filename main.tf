@@ -109,13 +109,14 @@ ssh-keygen -q -f builder_key -e -m 'PEM' > ${path.cwd}/.chef/builder_key.pem
 [ -f ${path.cwd}/.chef/builder_key.pem ] && echo 'builder_key.pem generated' || echo 'builder_key.pem missing' && exit 1
 cp ${path.cwd}/.chef/builder_key.pem ${path.cwd}/.chef/builder_key_databag
 cp ${path.cwd}/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}_key_databag
-perl -pe 's/\n/\\n/g' -i builder_key_databag
-perl -pe 's/\n/\\n/g' -i ${var.username}_key_databag
+perl -pe 's/\n/\\n/g' -i ${path.cwd}/.chef/builder_key_databag
+perl -pe 's/\n/\\n/g' -i ${path.cwd}/.chef/${var.username}_key_databag
 cd ${path.cwd}/.chef
 perl -pe 's/BUILDER_KEY/`cat builder_key_databag`/ge' -i delivery_builder_keys.json
 perl -pe 's/DELIVERY_PEM/`cat ${var.username}_key_databag`/ge' -i delivery_builder_keys.json
 knife data bag create keys
 knife data bag from file keys ${path.cwd}/.chef/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
+cat ${path.cwd}/.chef/delivery_builder_keys.json
 EOF
   }
 }
