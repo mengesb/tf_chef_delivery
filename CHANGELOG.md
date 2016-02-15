@@ -1,3 +1,11 @@
+v0.1.2 (2016-02-15)
+-------------------
+- Documentation cleanup and consisteny with other tf_chef works
+- More control around delivery user creation
+- Reordered some things
+- shortened some variables
+- Adjustments required as a result of tf_chef_server updates
+
 v0.1.1 (2016-02-14)
 -------------------
 - Fixing databag issues
