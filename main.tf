@@ -149,8 +149,8 @@ resource "aws_instance" "chef-delivery" {
   }
   # Copy over delivery.pem
   provisioner "file" {
-    source = "${path.cwd}/.chef/delivery.pem"
-    destination = "/tmp/.chef"
+    source = "${path.cwd}/.chef/${var.username}.pem"
+    destination = "/tmp/.chef/${var.username}.pem"
   }
   # Copy in license file
   provisioner "file" {
@@ -161,7 +161,7 @@ resource "aws_instance" "chef-delivery" {
   provisioner "remote-exec" {
     inline = [
       "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
-      "sudo mv /tmp/.chef/delivery.pem /etc/delivery",
+      "sudo mv /tmp/.chef/${var.username}.pem /etc/delivery/${var.username}.pem",
       "sudo mv /tmp/.chef/trusted_certs /etc/chef",
       "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
@@ -225,7 +225,7 @@ resource "aws_instance" "chef-delivery" {
   }
   # Copy back CHEF Delivery enterprise credentials file
   provisioner "local-exec" {
-    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_ip}:/tmp/.chef/${var.enterprise}.creds ${path.cwd}/.chef/${var.enterprise}.creds"
+    command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_dns}:/tmp/.chef/${var.enterprise}.creds ${path.cwd}/.chef/${var.enterprise}.creds"
   }
 }
 
