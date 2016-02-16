@@ -142,40 +142,6 @@ resource "aws_instance" "chef-delivery" {
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
-  # Copy over trusted certificates
-  provisioner "file" {
-    source = "${path.cwd}/.chef/trusted_certs"
-    destination = "/tmp/.chef"
-  }
-  # Copy over delivery.pem
-  provisioner "file" {
-    source = "${path.cwd}/.chef/${var.username}.pem"
-    destination = "/tmp/.chef/${var.username}.pem"
-  }
-  # Copy in license file
-  provisioner "file" {
-    source = "${var.license_file}"
-    destination = "/tmp/.chef/delivery.license"
-  }
-  # Copy in builder files
-  provisioner "file" {
-    source = "${path.cwd}/.chef/builder_key"
-    destination = "/tmp/.chef/builder_key"
-  }
-  provisioner "file" {
-    source = "${path.cwd}/.chef/builder_key.pub"
-    destination = "/tmp/.chef/builder_key.pub"
-  }
-  # Put files in proper locations
-  provisioner "remote-exec" {
-    inline = [
-      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
-      "sudo mv /tmp/.chef/${var.username}.pem /etc/delivery/${var.username}.pem",
-      "sudo mv /tmp/.chef/builder* /etc/delivery/",
-      "sudo mv /tmp/.chef/trusted_certs /etc/chef",
-      "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
-    ]
-  }
   # Hostname setup
   provisioner "remote-exec" {
     inline = [
@@ -190,6 +156,40 @@ resource "aws_instance" "chef-delivery" {
       "sudo chown root:root /tmp/hostname",
       "[ -f /etc/sysconfig/network ] && sudo sed -i 's/^HOSTNAME.*/HOSTNAME=${self.public_dns}/' /etc/sysconfig/network || sudo cp /tmp/hostname /etc/hostname",
       "sudo rm /tmp/hostname"
+    ]
+  }
+  # Copy over trusted certificates
+  provisioner "file" {
+    source = "${path.cwd}/.chef/trusted_certs"
+    destination = "/tmp/.chef"
+  }
+  # Copy over Delivery user PEM
+  provisioner "file" {
+    source = "${path.cwd}/.chef/${var.username}.pem"
+    destination = "/tmp/.chef/${var.username}.pem"
+  }
+  # Copy in license file
+  provisioner "file" {
+    source = "${var.license_file}"
+    destination = "/tmp/.chef/delivery.license"
+  }
+  # Copy in builder key pair
+  provisioner "file" {
+    source = "${path.cwd}/.chef/builder_key"
+    destination = "/tmp/.chef/builder_key"
+  }
+  provisioner "file" {
+    source = "${path.cwd}/.chef/builder_key.pub"
+    destination = "/tmp/.chef/builder_key.pub"
+  }
+  # Put files in proper locations
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
+      "sudo mv /tmp/.chef/${var.username}.pem /etc/delivery/${var.username}.pem",
+      "sudo mv /tmp/.chef/builder_key.pub /etc/delivery/builder_key.pub",
+      "sudo mv /tmp/.chef/trusted_certs /etc/chef",
+      "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
   # Handle iptables
@@ -225,17 +225,31 @@ resource "aws_instance" "chef-delivery" {
     validation_client_name = "${var.chef_org_short}-validator"
     validation_key = "${file("${path.cwd}/.chef/${var.chef_org_short}-validator.pem")}"
   }
+  # Set permissions and file placement
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mv /tmp/.chef/builder_key /etc/delivery/builder_key",
+      "sudo chown -R delivery:${var.aws_ami_user} /etc/delivery/builder_key /etc/delivery/builder_key.pub",
+      "sudo chmod 0600 /etc/delivery/builder_key",
+      "sudo chmod 0644 /etc/delivery/builder_key.pub"
+    ]
+  }
   # Generate CHEF Delivery enterprise credentials file
   provisioner "remote-exec" {
     inline = [
-      "sudo chown -R ${var.aws_ami_user} /tmp/.chef",
+      "sudo chown -R ${var.aws_ami_user}:${var.aws_ami_user} /tmp/.chef",
       "sudo delivery-ctl create-enterprise ${var.enterprise} --ssh-pub-key-file=/etc/delivery/builder_key.pub > /tmp/.chef/${var.enterprise}.creds",
-      "sudo chown -R ${var.aws_ami_user} /tmp/.chef"
+      "sudo chown ${var.aws_ami_user}:${var.aws_ami_user} /tmp/.chef/${var.enterprise}.creds",
+      "cat /tmp/.chef/${var.enterprise}.creds"
     ]
   }
   # Copy back CHEF Delivery enterprise credentials file
   provisioner "local-exec" {
     command  = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${var.aws_ami_user}@${self.public_dns}:/tmp/.chef/${var.enterprise}.creds ${path.cwd}/.chef/${var.enterprise}.creds"
+  }
+  # Local echo
+  provisioner "local-exec" {
+    command = "cat ${path.cwd}/.chef/${var.enterprise}.creds"
   }
 }
 
