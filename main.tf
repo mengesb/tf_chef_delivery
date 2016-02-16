@@ -105,7 +105,7 @@ cat > ${path.cwd}/.chef/delivery_builder_keys.json <<EOK
 EOK
 ssh-keygen -q -t rsa -N '' -b 2048 -f ${path.cwd}/.chef/builder_key
 [ -f ${path.cwd}/.chef/builder_key ] && echo 'builder_key generated' || echo "builder_key_missing && exit 1"
-ssh-keygen -q -f builder_key -e -m 'PEM' > ${path.cwd}/.chef/builder_key.pem
+ssh-keygen -q -f ${path.cwd}/.chef/builder_key -e -m 'PEM' > ${path.cwd}/.chef/builder_key.pem
 [ -f ${path.cwd}/.chef/builder_key.pem ] && echo 'builder_key.pem generated' || echo 'builder_key.pem missing' && exit 1
 cp ${path.cwd}/.chef/builder_key.pem ${path.cwd}/.chef/builder_key_databag
 cp ${path.cwd}/.chef/${var.username}.pem ${path.cwd}/.chef/${var.username}_key_databag

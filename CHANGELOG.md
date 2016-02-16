@@ -1,3 +1,8 @@
+v0.1.4 (2016-02-15)
+-------------------
+- Putting it all back
+- Fixed the real problem; sourcing the right file!
+
 v0.1.3 (2016-02-15)
 -------------------
 - Breaking out key generation
