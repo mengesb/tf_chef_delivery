@@ -157,11 +157,21 @@ resource "aws_instance" "chef-delivery" {
     source = "${var.license_file}"
     destination = "/tmp/.chef/delivery.license"
   }
+  # Copy in builder files
+  provisioner "file" {
+    source = "${path.cwd}/.chef/builder_key"
+    destination = "/tmp/.chef/builder_key"
+  }
+  provisioner "file" {
+    source = "${path.cwd}/.chef/builder_key.pub"
+    destination = "/tmp/.chef/builder_key.pub"
+  }
   # Put files in proper locations
   provisioner "remote-exec" {
     inline = [
       "sudo mv /tmp/.chef/delivery.license /var/opt/delivery/license",
       "sudo mv /tmp/.chef/${var.username}.pem /etc/delivery/${var.username}.pem",
+      "sudo mv /tmp/.chef/builder* /etc/delivery/",
       "sudo mv /tmp/.chef/trusted_certs /etc/chef",
       "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
