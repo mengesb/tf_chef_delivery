@@ -2,6 +2,7 @@ v0.1.4 (2016-02-15)
 -------------------
 - Putting it all back
 - Fixed the real problem; sourcing the right file!
+- Need to copy in delivery.pem to /etc/delivery still (cookbook requirement)
 
 v0.1.3 (2016-02-15)
 -------------------
