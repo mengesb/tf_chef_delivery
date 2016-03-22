@@ -7,6 +7,10 @@ variable "aws_access_key" {
 variable "aws_secret_key" {
   description = "Your AWS secret (ex. $AWS_SECRET_ACCESS_KEY)"
 }
+variable "aws_region" {
+  description = "AWS Region to deploy to"
+  default     = "us-west-1"
+}
 variable "aws_key_name" {
   description = "Name of the key pair uploaded to AWS"
 }
@@ -19,68 +23,155 @@ variable "aws_vpc_id" {
 variable "aws_subnet_id" {
   description = "AWS Subnet id (ex. subnet-ffffffff)"
 }
-variable "aws_ami_user" {
-  description = "AWS AMI default username"
-}
-variable "aws_ami_id" {
-  description = "AWS Instance ID (region dependent)"
-  default = "ami-45844401"
-}
 variable "aws_flavor" {
   description = "AWS Instance type to deploy"
-  default = "c3.xlarge"
+  default     = "c3.xlarge"
 }
-variable "aws_region" {
-  description = "AWS Region to deploy to"
-  default = "us-west-1"
+variable "ami_os" {
+  description = "Delivery server OS (options: centos7, [centos6], ubuntu16, ubuntu14)"
+  default     = "centos6"
+}
+variable "ami_map" {
+  description = "AMI map of OS/region (2016-03-14)"
+  default     = {
+    centos7-us-east-1       = "ami-6d1c2007"
+    centos7-us-west-2       = "ami-d2c924b2"
+    centos7-us-west-1       = "ami-af4333cf"
+    centos7-eu-central-1    = "ami-9bf712f4"
+    centos7-eu-west-1       = "ami-7abd0209"
+    centos7-ap-southeast-1  = "ami-f068a193"
+    centos7-ap-southeast-2  = "ami-fedafc9d"
+    centos7-ap-northeast-1  = "ami-eec1c380"
+    centos7-ap-northeast-2  = "ami-c74789a9"
+    centos7-sa-east-1       = "ami-26b93b4a"
+    centos6-us-east-1       = "ami-1c221e76"
+    centos6-us-west-2       = "ami-05cf2265"
+    centos6-us-west-1       = "ami-ac5f2fcc"
+    centos6-eu-central-1    = "ami-2bf11444"
+    centos6-eu-west-1       = "ami-edb9069e"
+    centos6-ap-southeast-1  = "ami-106aa373"
+    centos6-ap-southeast-2  = "ami-87d2f4e4"
+    centos6-ap-northeast-1  = "ami-fa3d3f94"
+    centos6-ap-northeast-2  = "ami-56478938"
+    centos6-sa-east-1       = "ami-03b93b6f"
+    ubuntu16-us-east-1      = "-1"
+    ubuntu16-us-west-2      = "-1"
+    ubuntu16-us-west-1      = "-1"
+    ubuntu16-eu-central-1   = "-1"
+    ubuntu16-eu-west-1      = "-1"
+    ubuntu16-ap-southeast-1 = "-1"
+    ubuntu16-ap-southeast-2 = "-1"
+    ubuntu16-ap-northeast-1 = "-1"
+    ubuntu16-ap-northeast-2 = "-1"
+    ubuntu16-sa-east-1      = "-1"
+    ubuntu14-us-east-1      = "ami-415f6d2b"
+    ubuntu14-us-west-2      = "ami-3d2cce5d"
+    ubuntu14-us-west-1      = "ami-1d25557d"
+    ubuntu14-eu-central-1   = "ami-9b9c86f7"
+    ubuntu14-eu-west-1      = "ami-abc579d8"
+    ubuntu14-ap-southeast-1 = "ami-f500c996"
+    ubuntu14-ap-southeast-2 = "ami-1f30167c"
+    ubuntu14-ap-northeast-1 = "ami-88686be6"
+    ubuntu14-ap-northeast-2 = "-1"
+    ubuntu14-sa-east-1      = "ami-f3e4669f"
+    ubuntu12-us-east-1      = "ami-88dfdee2"
+    ubuntu12-us-west-2      = "ami-1a977e7a"
+    ubuntu12-us-west-1      = "ami-4f285a2f"
+    ubuntu12-eu-central-1   = "ami-3cf61153"
+    ubuntu12-eu-west-1      = "ami-65932916"
+    ubuntu12-ap-southeast-1 = "ami-26e32845"
+    ubuntu12-ap-southeast-2 = "ami-d54e6eb6"
+    ubuntu12-ap-northeast-1 = "ami-f2afa79c"
+    ubuntu12-ap-northeast-2 = "-1"
+    ubuntu12-sa-east-1      = "ami-2661ec4a"
+  }
+}
+variable "ami_usermap" {
+  description = "Default username map for AMI selected"
+  default     = {
+    centos7   = "centos"
+    centos6   = "centos"
+    ubuntu16  = "ubuntu"
+    ubuntu14  = "ubuntu"
+    ubuntu12  = "ubuntu"
+  }
 }
 #
-# tf_chef_delivery_server specific configs
+# specific configs
 #
-variable "basename" {
-  description = "Basename for AWS Name tag of CHEF Delivery server"
-  default = "chef-delivery"
+variable "tag_description" {
+  description = "Delivery server AWS description tag text"
+  default     = "Created using Terraform (tf_Chef_delivery)"
 }
-variable "count" {
-  description = "Number of CHEF Delivery servers to provision. DO NOT CHANGE!"
-  default = 1
+variable "hostname" {
+  description = "Delivery server hostname"
+  default     = "localhost"
 }
-variable "enterprise" {
-  description = "Name of the CHEF Delivery enterprise to create"
-  default = "Terraform"
+variable "domain" {
+  description = "Delivery server domain name"
+  default     = "localdomain"
+}
+variable "server_count" {
+  description = "Number of Delivery servers to provision. DO NOT CHANGE!"
+  default     = 1
+}
+variable "ent" {
+  description = "Name of the Chef Delivery enterprise to create"
+  default     = "Terraform"
 }
 variable "username" {
-  description = "Username of the first CHEF Delivery user"
-  default = "delivery"
+  description = "Username of the first Delivery user"
+  default     = "delivery"
 }
 variable "user_firstname" {
-  description = "Delivery user first name on CHEF Server"
-  default = "Delivery"
+  description = "Delivery user first name on Chef Server"
+  default     = "Delivery"
 }
 variable "user_lastname" {
-  description = "Delivery user last name on CHEF Server"
-  default = "User"
+  description = "Delivery user last name on Chef Server"
+  default     = "User"
 }
 variable "user_email" {
   description = "Delivery user's e-mail address"
   default = "delivery@domain.tld"
 }
-variable "ssh_cidrs" {
-  description = "List of CIDRs to allow SSH from"
-  default = "0.0.0.0/0"
+variable "allowed_cidrs" {
+  description = "List of CIDRs to allow SSH from (CSV list allowed)"
+  default     = "0.0.0.0/0"
 }
-variable "license_file" {
-  description = "Path to CHEF Delivery license file"
+variable "delivery_license" {
+  description = "Path to Delivery license file"
 }
-variable "chef_server_dns" {
-  description = "DNS address of the CHEF Server"
+variable "chef_fqdn" {
+  description = "Fully qualified DNS address of the Chef Server"
 }
-variable "chef_org_short" {
-  description = "CHEF Server organization short name (lowercase alphanumeric characters only)"
+variable "chef_org" {
+  description = "Chef Server organization short name (lowercase alphanumeric characters only)"
 }
-variable "chef_server_sg" {
-  description = "CHEF Server security group id"
+variable "chef_org_validator" {
+  descirption = "Path to validation pem for ${var.chef_org}"
+}
+variable "chef_sg" {
+  description = "Chef Server security group id"
+}
+variable "knife_rb" {
+  description = "Path to your knife.rb configuration"
+  default     = ".chef/knife.rb"
+}
+variable "r53_ttl" {
+  description = "Route53 A record TTL (Default: 180)"
+  default     = 180
+}
+variable "r53_zone_id" {
+  description = "Route53 Zone ID"
+  default     = 0
 }
 variable "secret_key_file" {
   description = "Encrypted data bag secret file"
+}
+variable "ssl_cert" {
+  description = "SSL Certificate in PEM format"
+}
+variable "ssl_key" {
+  description = "Key for SSL Certificate"
 }

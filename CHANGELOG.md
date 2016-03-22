@@ -1,3 +1,19 @@
+v0.2.0 (2016-03-21)
+-------------------
+- Re-wrote most of the code
+- Some formatting to make reading easier
+- Syntax updates for Terraform 0.6.14
+- Add Route53 controls
+- Add SSL certificate controls
+- Replace hostname computation from basename and count to just hostname and domain
+- Implement user and AMI mapping per [tf_chef_server](https://github.com/mengesb/tf_chef_server)
+- Remove specific IPTables handles, disabling IPTables or UFW globally
+- Better handle on delivery and keys databags
+- Provisioning using Chef provisioner and attributes_json
+- Using cookbooks at Chef server to govern system settings better than scripting EC2 variable hooks
+- Using templates instead of all HEREDOC
+- Doc and version updates
+
 v0.1.5 (2016-02-16)
 -------------------
 - Trimmed down some of the commands executed
