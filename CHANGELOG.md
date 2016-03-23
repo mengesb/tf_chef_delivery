@@ -1,3 +1,10 @@
+v0.2.1 (2016-03-21)
+-------------------
+- Code consistency update; align with other TF modules
+- Re-ordered several variables (alphabetize)
+- Update some comment lines
+- Fix databag issue (forgot to upload after creating)
+
 v0.2.0 (2016-03-21)
 -------------------
 - Re-wrote most of the code
