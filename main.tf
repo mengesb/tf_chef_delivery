@@ -1,4 +1,4 @@
-# Chef Delivery AWS security group - https://github.com/Chef-cookbooks/delivery-cluster
+# Chef Delivery AWS security group - https://github.com/chef-cookbooks/delivery-cluster
 resource "aws_security_group" "chef-delivery" {
   name        = "${var.hostname}.${var.domain} security group"
   description = "Delivery server ${var.hostname}.${var.domain}"
@@ -8,7 +8,7 @@ resource "aws_security_group" "chef-delivery" {
   }
 }
 # Chef Server -> Delivery
-resource "aws_security_group_rule" "chef-delivery_allow_all_Chef-server" {
+resource "aws_security_group_rule" "chef-delivery_allow_all_chef-server" {
   type        = "ingress"
   from_port   = 0
   to_port     = 0
@@ -71,7 +71,7 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
   security_group_id = "${aws_security_group.chef-delivery.id}"
 }
 #
-# Chef Delivery requirements
+# Delivery requirements
 #
 resource "template_file" "attributes-json" {
   template    = "${file("${path.module}/files/attributes-json.tpl")}"
@@ -119,17 +119,20 @@ cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.user
 cat > .delivery/delivery.json <<EOF
 ${template_file.delivery-json.rendered}
 EOF
-cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag`/ge' -i delivery.json
+cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag`/ge' -i delivery.json && cd ..
+rm -rf .delivery/${var.username}_databag
+knife data bag create delivery
+knife data bag from file delivery .delivery/delivery.json --encrypt --secret-file ${var.secret_key_file}
 EOC
   }
 }
 resource "null_resource" "delivery-server" {
   depends_on = ["null_resource.clean-slate"]
   provisioner "local-exec" {
-    command = "knife node-delete ${var.hostname}.${var.domain} -y ; echo OK"
+    command = "knife node-delete   ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
   }
   provisioner "local-exec" {
-    command = "knife client-delete ${var.hostname}.${var.domain} -y ; echo OK"
+    command = "knife client-delete ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
   }
 }
 resource "null_resource" "builder-key" {
@@ -140,32 +143,35 @@ resource "null_resource" "builder-key" {
   provisioner "local-exec" {
     command = <<EOC
 cat .delivery/builder_key | perl -pe 's/\n/\\n/g' > .delivery/builder_databag
+cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag2
 cat > .delivery/delivery_builder_keys.json <<EOF
 ${template_file.builder-json.rendered}
 EOF
-cd .delivery && perl -pe 's/text1/`cat builder_databag`/ge' -i delivery_builder_keys.json
+cd .delivery && perl -pe 's/text1/`cat builder_databag`/ge' -i delivery_builder_keys.json && cd ..
+cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag2`/ge' -i delivery.json && cd ..
+rm -rf .delivery/builder_databag .delivery/${var.username}_databag2
+knife data bag create keys
+knife data bag from file keys .delivery/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
 EOC
   }
 }
 resource "null_resource" "delivery-cookbooks" {
   depends_on = ["null_resource.clean-slate"]
-  connection {
-    user        = "${lookup(var.ami_usermap, var.ami_os)}"
-    private_key = "${var.aws_private_key_file}"
-    host        = "${var.chef_fqdn}"
+  provisioner "local-exec" {
+    command = "git clone https://github.com/chef-cookbooks/delivery-cluster cookbooks/delivery-cluster"
   }
-  provisioner "file" {
-    source      = "${path.module}/files/chef-cookbooks.sh"
-    destination = "chef-cookbooks.sh"
+  provisioner "local-exec" {
+    command = "rm -rf cookbooks/delivery-cluster/.chef"
   }
-  provisioner "remote-exec" {
-    inline = [
-      "bash chef-cookbooks.sh ; rm -rf chef-cookbooks.sh",
-    ]
+  provisioner "local-exec" {
+    command = "cd cookbooks/delivery-cluster && berks install && berks upload"
+  }
+  provisioner "local-exec" {
+    command = "rm -rf cookbooks"
   }
 }
 #
-# Chef Delivery
+# Delivery
 #
 resource "aws_instance" "chef-delivery" {
   depends_on    = ["null_resource.builder-key","null_resource.delivery-user","null_resource.delivery-server","null_resource.delivery-cookbooks"]
@@ -193,17 +199,15 @@ resource "aws_instance" "chef-delivery" {
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
-  # Copy over Delivery user PEM
-  provisioner "file" {
-    source      = ".delivery/${var.username}.pem"
-    destination = ".delivery/${var.username}.pem"
-  }
-  # Copy in license file
+  # Upload license and user key files
   provisioner "file" {
     source      = "${var.delivery_license}"
     destination = ".delivery/delivery.license"
   }
-  # Copy in builder key pair
+  provisioner "file" {
+    source      = ".delivery/${var.username}.pem"
+    destination = ".delivery/${var.username}.pem"
+  }
   provisioner "file" {
     source      = ".delivery/builder_key"
     destination = ".delivery/builder_key"
@@ -241,7 +245,7 @@ resource "aws_instance" "chef-delivery" {
     validation_client_name = "${var.chef_org}-validator"
     validation_key  = "${file("${var.chef_org_validator}")}"
   }
-  # Place SSL certificate/key files
+  # Upload SSL certificate/key files
   provisioner "file" {
     source      = "${var.ssl_cert}"
     destination = ".delivery/certificate.pem"
@@ -259,7 +263,7 @@ resource "aws_instance" "chef-delivery" {
       "sudo delivery-ctl restart nginx",
     ]
   }
-  # Set permissions and file placement
+  # Set permissions
   provisioner "remote-exec" {
     inline = [
       "sudo chown -R delivery:${lookup(var.ami_usermap, var.ami_os)} /etc/delivery/builder_key /etc/delivery/builder_key.pub",
@@ -267,7 +271,7 @@ resource "aws_instance" "chef-delivery" {
       "sudo chmod 0644 /etc/delivery/builder_key.pub",
     ]
   }
-  # Generate Chef Delivery enterprise credentials file
+  # Generate Delivery enterprise credentials file
   provisioner "remote-exec" {
     inline = [
       "sudo chown -R ${lookup(var.ami_usermap, var.ami_os)} .delivery",
@@ -275,7 +279,7 @@ resource "aws_instance" "chef-delivery" {
       "sudo chown -R ${lookup(var.ami_usermap, var.ami_os)} .delivery",
     ]
   }
-  # Copy back Chef Delivery enterprise credentials file
+  # Harvest Delivery enterprise credentials file
   provisioner "local-exec" {
     command = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${lookup(var.ami_usermap, var.ami_os)}@${self.public_ip}:.delivery/${var.ent}.creds .delivery/${var.ent}.creds"
   }

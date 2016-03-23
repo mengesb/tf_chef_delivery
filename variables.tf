@@ -4,12 +4,9 @@
 variable "aws_access_key" {
   description = "Your AWS key (ex. $AWS_ACCESS_KEY_ID)"
 }
-variable "aws_secret_key" {
-  description = "Your AWS secret (ex. $AWS_SECRET_ACCESS_KEY)"
-}
-variable "aws_region" {
-  description = "AWS Region to deploy to"
-  default     = "us-west-1"
+variable "aws_flavor" {
+  description = "AWS Instance type to deploy"
+  default     = "c3.xlarge"
 }
 variable "aws_key_name" {
   description = "Name of the key pair uploaded to AWS"
@@ -17,20 +14,22 @@ variable "aws_key_name" {
 variable "aws_private_key_file" {
   description = "Full path to your local private key"
 }
-variable "aws_vpc_id" {
-  description = "AWS VPC id (ex. vpc-ffffffff)"
+variable "aws_region" {
+  description = "AWS Region to deploy to"
+  default     = "us-west-1"
+}
+variable "aws_secret_key" {
+  description = "Your AWS secret (ex. $AWS_SECRET_ACCESS_KEY)"
 }
 variable "aws_subnet_id" {
   description = "AWS Subnet id (ex. subnet-ffffffff)"
 }
-variable "aws_flavor" {
-  description = "AWS Instance type to deploy"
-  default     = "c3.xlarge"
+variable "aws_vpc_id" {
+  description = "AWS VPC id (ex. vpc-ffffffff)"
 }
-variable "ami_os" {
-  description = "Delivery server OS (options: centos7, [centos6], ubuntu16, ubuntu14)"
-  default     = "centos6"
-}
+#
+# AMI mapping
+#
 variable "ami_map" {
   description = "AMI map of OS/region (2016-03-14)"
   default     = {
@@ -86,6 +85,10 @@ variable "ami_map" {
     ubuntu12-sa-east-1      = "ami-2661ec4a"
   }
 }
+variable "ami_os" {
+  description = "Delivery server OS (options: centos7, [centos6], ubuntu16, ubuntu14)"
+  default     = "centos6"
+}
 variable "ami_usermap" {
   description = "Default username map for AMI selected"
   default     = {
@@ -99,48 +102,9 @@ variable "ami_usermap" {
 #
 # specific configs
 #
-variable "tag_description" {
-  description = "Delivery server AWS description tag text"
-  default     = "Created using Terraform (tf_Chef_delivery)"
-}
-variable "hostname" {
-  description = "Delivery server hostname"
-  default     = "localhost"
-}
-variable "domain" {
-  description = "Delivery server domain name"
-  default     = "localdomain"
-}
-variable "server_count" {
-  description = "Number of Delivery servers to provision. DO NOT CHANGE!"
-  default     = 1
-}
-variable "ent" {
-  description = "Name of the Chef Delivery enterprise to create"
-  default     = "Terraform"
-}
-variable "username" {
-  description = "Username of the first Delivery user"
-  default     = "delivery"
-}
-variable "user_firstname" {
-  description = "Delivery user first name on Chef Server"
-  default     = "Delivery"
-}
-variable "user_lastname" {
-  description = "Delivery user last name on Chef Server"
-  default     = "User"
-}
-variable "user_email" {
-  description = "Delivery user's e-mail address"
-  default = "delivery@domain.tld"
-}
 variable "allowed_cidrs" {
   description = "List of CIDRs to allow SSH from (CSV list allowed)"
   default     = "0.0.0.0/0"
-}
-variable "delivery_license" {
-  description = "Path to Delivery license file"
 }
 variable "chef_fqdn" {
   description = "Fully qualified DNS address of the Chef Server"
@@ -154,9 +118,28 @@ variable "chef_org_validator" {
 variable "chef_sg" {
   description = "Chef Server security group id"
 }
+variable "delivery_license" {
+  description = "Path to Delivery license file"
+}
+variable "domain" {
+  description = "Delivery server domain name"
+  default     = "localdomain"
+}
+variable "ent" {
+  description = "Name of the Delivery enterprise to create"
+  default     = "Terraform"
+}
+variable "hostname" {
+  description = "Delivery server hostname"
+  default     = "localhost"
+}
 variable "knife_rb" {
   description = "Path to your knife.rb configuration"
   default     = ".chef/knife.rb"
+}
+variable "r53" {
+  description = "Use Route53"
+  default     = 0
 }
 variable "r53_ttl" {
   description = "Route53 A record TTL (Default: 180)"
@@ -169,9 +152,34 @@ variable "r53_zone_id" {
 variable "secret_key_file" {
   description = "Encrypted data bag secret file"
 }
+variable "server_count" {
+  description = "Number of Delivery servers to provision. DO NOT CHANGE!"
+  default     = 1
+}
 variable "ssl_cert" {
   description = "SSL Certificate in PEM format"
 }
 variable "ssl_key" {
   description = "Key for SSL Certificate"
 }
+variable "tag_description" {
+  description = "Delivery server AWS description tag text"
+  default     = "Created using Terraform (tf_chef_delivery)"
+}
+variable "username" {
+  description = "Username of the first Delivery user"
+  default     = "delivery"
+}
+variable "user_email" {
+  description = "Delivery user's e-mail address"
+  default = "delivery@domain.tld"
+}
+variable "user_firstname" {
+  description = "Delivery user first name on Chef Server"
+  default     = "Delivery"
+}
+variable "user_lastname" {
+  description = "Delivery user last name on Chef Server"
+  default     = "User"
+}
+
