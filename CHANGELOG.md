@@ -1,3 +1,8 @@
+v0.2.2 (2016-03-23)
+-------------------
+- Added handle for internal DNS on Route53
+- Added tag to aws_instance
+
 v0.2.1 (2016-03-21)
 -------------------
 - Code consistency update; align with other TF modules

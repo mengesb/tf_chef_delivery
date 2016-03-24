@@ -183,6 +183,7 @@ resource "aws_instance" "chef-delivery" {
   key_name      = "${var.aws_key_name}"
   tags = {
     Name        = "${var.hostname}.${var.domain}"
+    Description = "${var.tag_description}"
   }
   root_block_device = {
     delete_on_termination = true
@@ -296,3 +297,12 @@ resource "aws_route53_record" "chef-delivery" {
   ttl     = "${var.r53_ttl}"
   records = ["${aws_instance.chef-delivery.public_ip}"]
 }
+# Private Route53 DNS record
+resource "aws_route53_record" "chef-delivery-private" {
+  zone_id = "${var.r53_zone_internal_id}"
+  name    = "${aws_instance.chef-delivery.tags.Name}"
+  type    = "A"
+  ttl     = "${var.r53_ttl}"
+  records = ["${aws_instance.chef-delivery.private_ip}"]
+}
+
