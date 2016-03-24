@@ -1,5 +1,5 @@
 # tf_chef_delivery
-Terraform module to setup a CHEF Delivery. Requires tf_chef_server.
+Terraform module to setup a CHEF Delivery.
 
 ## Assumptions
 
@@ -55,7 +55,8 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 * `license_file`: Path to the `delivery.license` file
 * `r53`: Boolean determines if Route53 will be used or not. Default: `0`
 * `r53_ttl`: Time to Live (TTL) setting for Route53 A record to be created. Default: `180`
-* `r53_zone_id`: AWS Route53 Zone ID to add an A record for the Chef Server
+* `r53_zone_id`: AWS Route53 Zone ID to add an A record for the Delivery server
+* `r53_zone_internal_id`: AWS Route53 Internal Zone ID to add an A record for the Delivery server
 * `secret_key_file`: Encrypted data bag secret file.
 * `server_count`: Delivery server count. Deafult: `1`, DO NOT CHANGE!
 * `ssl_cert`: Delivery server SSL certificate in PEM format

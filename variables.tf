@@ -146,7 +146,11 @@ variable "r53_ttl" {
   default     = 180
 }
 variable "r53_zone_id" {
-  description = "Route53 Zone ID"
+  description = "Route53 zone id for public DNS"
+  default     = 0
+}
+variable "r53_zone_internal_id" {
+  description = "Route53 zone id for internal DNS"
   default     = 0
 }
 variable "secret_key_file" {
