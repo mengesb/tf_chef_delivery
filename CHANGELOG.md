@@ -3,6 +3,10 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
+v0.3.1 (2016-04-25)
+-------------------
+- [Brian Menges] - Add outputs `private_ip` and `public_ip`
+
 v0.3.0 (2016-04-25)
 -------------------
 - [Brian Menges] - Documentation updates
@@ -87,3 +91,4 @@ v0.0.1 (2016-02-05)
 Check the [Markdown Syntax Guide](http://daringfireball.net/projects/markdown/syntax) for help with Markdown.
 
 The [Github Flavored Markdown page](http://github.github.com/github-flavored-markdown/) describes the differences between markdown on github and standard markdown.
+
