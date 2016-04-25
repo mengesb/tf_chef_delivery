@@ -52,6 +52,12 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
   cidr_blocks = ["0.0.0.0/0"]
   security_group_id = "${aws_security_group.chef-delivery.id}"
 }
+# AWS settings
+provider "aws" {
+  access_key  = "${var.aws_access_key}"
+  secret_key  = "${var.aws_secret_key}"
+  region      = "${var.aws_region}"
+}
 #
 # Provisioning template
 #
