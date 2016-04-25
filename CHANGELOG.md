@@ -3,6 +3,10 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
+v0.3.2 (2016-04-25)
+-------------------
+- [Brian Menges] - Merge error, trying v0.3.1 again
+
 v0.3.1 (2016-04-25)
 -------------------
 - [Brian Menges] - Add outputs `private_ip` and `public_ip`
