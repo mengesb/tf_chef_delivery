@@ -235,7 +235,8 @@ resource "aws_instance" "chef-delivery" {
     inline = [
       "sudo mv .delivery/delivery.license /var/opt/delivery/license",
       "sudo mv .delivery/* /etc/delivery",
-      "sudo chown -R delivery /etc/delivery/builder_key /etc/delivery/builder_key.pub",
+      "sudo chown -R root:root /etc/delivery/builder_key /etc/delivery/builder_key.pub /etc/delivery/delivery.pem",
+      "sudo chmod 0666 /etc/delivery/builder_key /etc/delivery/builder_key.pub /etc/delivery/delivery.pem",
       "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
@@ -265,6 +266,9 @@ resource "aws_instance" "chef-delivery" {
     inline = [
       "sudo mv .delivery/certificate.pem /var/opt/delivery/nginx/ca/${self.tags.Name}.crt",
       "sudo mv .delivery/certificate.key /var/opt/delivery/nginx/ca/${self.tags.Name}.key",
+      "sudo chown -R delivery /etc/delivery/builder_key /etc/delivery/builder_key.pub /etc/delivery/delivery.pem",
+      "sudo chmod 0600 /etc/delivery/builder_key /etc/delivery/delivery.pem",
+      "sudo chmod 0640 /etc/delivery/builder_key.pub",
       "sudo delivery-ctl reconfigure",
       "sudo delivery-ctl restart nginx",
     ]

@@ -3,6 +3,10 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
+v0.3.4 (2016-04-25)
+-------------------
+- [Brian Menges] - Can't set permissions to user that doesn't exist
+
 v0.3.3 (2016-04-25)
 -------------------
 - [Brian Menges] - Add AWS provisioner
