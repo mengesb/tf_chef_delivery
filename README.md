@@ -1,5 +1,5 @@
 # tf_chef_delivery
-Terraform module to setup a CHEF Delivery.
+Terraform module to setup a CHEF Delivery. Requires Chef Server.
 
 ## Assumptions
 
@@ -46,25 +46,27 @@ These resources will incur charges on your AWS bill. It is your responsibility t
 ### tf_chef_delivery variables
 
 * `allowed_cidrs`: The comma seperated list of addresses in CIDR format to allow SSH access. Default `0.0.0.0/0`
-* `domain`: Delivery server's domain. Default: 'localdomain'
 * `chef_fqdn`: DNS address of the CHEF Server
 * `chef_org_short`: CHEF Server organization.
 * `chef_sg`: CHEF Server security group id.
+* `client_version`: Chef client version. Default: `12.8.1`
+* `domain`: Delivery server's domain. Default: 'localdomain'
 * `ent`: Delivery enterprise to create. Default `Terraform`
 * `hostname`: Delivery server's hostname. Default: `delivery-01`
 * `license_file`: Path to the `delivery.license` file
-* `r53`: Boolean determines if Route53 will be used or not. Default: `0`
-* `r53_ttl`: Time to Live (TTL) setting for Route53 A record to be created. Default: `180`
-* `r53_zone_id`: AWS Route53 Zone ID to add an A record for the Delivery server
-* `r53_zone_internal_id`: AWS Route53 Internal Zone ID to add an A record for the Delivery server
+* `log_to_file`: Output chef-client runtime to logfiles/
+* `public_ip`: Associate public IP to instance. Default `true`
+* `root_delete_termination`: Delete root device on VM termination. Default: `true`
 * `secret_key_file`: Encrypted data bag secret file.
 * `server_count`: Delivery server count. Deafult: `1`, DO NOT CHANGE!
 * `ssl_cert`: Delivery server SSL certificate in PEM format
 * `ssl_key`: Delivery server SSL certificate key
 * `tag_description`: Text field tag 'Description'
 * `username`: Delivery username on CHEF Server. Default `delivery`
+* `user_email`: Delivery user e-mail address. Default `delivery@domain.tld`
 * `user_firstname`: Delivery user first name. Default `Delivery`
 * `user_lastname`: Delivery user last name. Default `User`
+* `wait_on`: Method for passing in dependencies through modules to control workflow
 
 ### Map variables
 

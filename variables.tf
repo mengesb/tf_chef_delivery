@@ -115,8 +115,9 @@ variable "chef_org" {
 variable "chef_org_validator" {
   descirption = "Path to validation pem for ${var.chef_org}"
 }
-variable "chef_sg" {
-  description = "Chef Server security group id"
+variable "client_version" {
+  description = "Chef client version"
+  default     = "12.8.1"
 }
 variable "delivery_license" {
   description = "Path to Delivery license file"
@@ -137,21 +138,17 @@ variable "knife_rb" {
   description = "Path to your knife.rb configuration"
   default     = ".chef/knife.rb"
 }
-variable "r53" {
-  description = "Use Route53"
-  default     = 0
+variable "log_to_file" {
+  description = "Output chef-client runtime to logfiles/"
+  default     = true
 }
-variable "r53_ttl" {
-  description = "Route53 A record TTL (Default: 180)"
-  default     = 180
+variable "public_ip" {
+  description = "Associate a public IP to the instance"
+  default     = true
 }
-variable "r53_zone_id" {
-  description = "Route53 zone id for public DNS"
-  default     = 0
-}
-variable "r53_zone_internal_id" {
-  description = "Route53 zone id for internal DNS"
-  default     = 0
+variable "root_delete_termination" {
+  description = "Delete server root block device on termination"
+  default     = true
 }
 variable "secret_key_file" {
   description = "Encrypted data bag secret file"
@@ -185,5 +182,9 @@ variable "user_firstname" {
 variable "user_lastname" {
   description = "Delivery user last name on Chef Server"
   default     = "User"
+}
+variable "wait_on" {
+  description = "Variable to hold outputs of other moudles to force waiting"
+  default     = "Nothing"
 }
 
