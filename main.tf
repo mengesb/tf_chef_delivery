@@ -7,24 +7,6 @@ resource "aws_security_group" "chef-delivery" {
     Name      = "${var.hostname}.${var.domain} security group"
   }
 }
-# Chef Server -> Delivery
-resource "aws_security_group_rule" "chef-delivery_allow_all_chef-server" {
-  type        = "ingress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  source_security_group_id = "${var.chef_sg}"
-  security_group_id = "${aws_security_group.chef-delivery.id}"
-}
-# Delivery -> Chef Server
-resource "aws_security_group_rule" "chef-server_allow_all_chef-delivery" {
-  type        = "ingress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  source_security_group_id = "${aws_security_group.chef-delivery.id}"
-  security_group_id = "${var.chef_sg}"
-}
 # SSH - allowed_cidrs
 resource "aws_security_group_rule" "chef-delivery_allow_22_tcp_all" {
   type        = "ingress"
@@ -71,7 +53,7 @@ resource "aws_security_group_rule" "chef-delivery_allow_all" {
   security_group_id = "${aws_security_group.chef-delivery.id}"
 }
 #
-# Delivery requirements
+# Provisioning template
 #
 resource "template_file" "attributes-json" {
   template    = "${file("${path.module}/files/attributes-json.tpl")}"
@@ -82,24 +64,37 @@ resource "template_file" "attributes-json" {
     domain    = "${var.domain}"
   }
 }
+# Delivery builder databag template
 resource "template_file" "builder-json" {
   template = "${file("${path.module}/files/delivery-builder-keys-json.tpl")}"
 }
+# Delivery data bag
 resource "template_file" "delivery-json" {
   template = "${file("${path.module}/files/delivery-json.tpl")}"
 }
+# Purge local cache directory
 resource "null_resource" "clean-slate" {
   provisioner "local-exec" {
     command = "rm -rf .delivery ; mkdir -p .delivery"
   }
 }
+#
+# Wait on
+#
+resource "null_resource" "wait_on" {
+  provisioner "local-exec" {
+    command = "echo Waited on ${var.wait_on} before proceeding"
+  }
+}
+# Delivery user required in Chef organization
 resource "null_resource" "delivery-user" {
-  depends_on = ["null_resource.clean-slate"]
+  depends_on = ["null_resource.clean-slate","null_resource.wait_on"]
   connection {
     user        = "${lookup(var.ami_usermap, var.ami_os)}"
     private_key = "${var.aws_private_key_file}"
     host        = "${var.chef_fqdn}"
   }
+  # Create user
   provisioner "remote-exec" {
     inline = [
       "rm -rf .delivery ; mkdir .delivery",
@@ -110,53 +105,48 @@ resource "null_resource" "delivery-user" {
       "sudo chown -R ${lookup(var.ami_usermap, var.ami_os)} .delivery",
     ]
   }
+  # Copy back private key
   provisioner "local-exec" {
     command = "scp -o stricthostkeychecking=no -i ${var.aws_private_key_file} ${lookup(var.ami_usermap, var.ami_os)}@${var.chef_fqdn}:.delivery/${var.username}.pem .delivery/${var.username}.pem"
   }
+  # Update delivery data bag and push
   provisioner "local-exec" {
-    command = <<EOC
-cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag
-cat > .delivery/delivery.json <<EOF
-${template_file.delivery-json.rendered}
-EOF
-cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag`/ge' -i delivery.json && cd ..
-rm -rf .delivery/${var.username}_databag
-knife data bag create delivery
-knife data bag from file delivery .delivery/delivery.json --encrypt --secret-file ${var.secret_key_file}
-EOC
+    command = <<-EOC
+      cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag
+      cat > .delivery/delivery.json <<EOF
+      ${template_file.delivery-json.rendered}
+      EOF
+      cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag`/ge' -i delivery.json && cd ..
+      rm -rf .delivery/${var.username}_databag
+      knife data bag create delivery
+      knife data bag from file delivery .delivery/delivery.json --encrypt --secret-file ${var.secret_key_file}
+      EOC
   }
 }
-resource "null_resource" "delivery-server" {
-  depends_on = ["null_resource.clean-slate"]
-  provisioner "local-exec" {
-    command = "knife node-delete   ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
-  }
-  provisioner "local-exec" {
-    command = "knife client-delete ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
-  }
-}
+# Generate build user and data bag information
 resource "null_resource" "builder-key" {
-  depends_on = ["null_resource.clean-slate"]
+  depends_on = ["null_resource.clean-slate","null_resource.wait_on"]
   provisioner "local-exec" {
     command = "ssh-keygen -q -t rsa -N '' -b 2048 -f .delivery/builder_key"
   }
   provisioner "local-exec" {
-    command = <<EOC
-cat .delivery/builder_key | perl -pe 's/\n/\\n/g' > .delivery/builder_databag
-cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag2
-cat > .delivery/delivery_builder_keys.json <<EOF
-${template_file.builder-json.rendered}
-EOF
-cd .delivery && perl -pe 's/text1/`cat builder_databag`/ge' -i delivery_builder_keys.json && cd ..
-cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag2`/ge' -i delivery.json && cd ..
-rm -rf .delivery/builder_databag .delivery/${var.username}_databag2
-knife data bag create keys
-knife data bag from file keys .delivery/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
-EOC
+    command = <<-EOC
+      cat .delivery/builder_key | perl -pe 's/\n/\\n/g' > .delivery/builder_databag
+      cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag2
+      cat > .delivery/delivery_builder_keys.json <<EOF
+      ${template_file.builder-json.rendered}
+      EOF
+      cd .delivery && perl -pe 's/text1/`cat builder_databag`/ge' -i delivery_builder_keys.json && cd ..
+      cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag2`/ge' -i delivery.json && cd ..
+      rm -rf .delivery/builder_databag .delivery/${var.username}_databag2
+      knife data bag create keys
+      knife data bag from file keys .delivery/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
+      EOC
   }
 }
+# Delivery cookbooks
 resource "null_resource" "delivery-cookbooks" {
-  depends_on = ["null_resource.clean-slate"]
+  depends_on = ["null_resource.clean-slate","null_resource.wait_on"]
   provisioner "local-exec" {
     command = "git clone https://github.com/chef-cookbooks/delivery-cluster cookbooks/delivery-cluster"
   }
@@ -171,13 +161,14 @@ resource "null_resource" "delivery-cookbooks" {
   }
 }
 #
-# Delivery
+# Provision server
 #
 resource "aws_instance" "chef-delivery" {
-  depends_on    = ["null_resource.builder-key","null_resource.delivery-user","null_resource.delivery-server","null_resource.delivery-cookbooks"]
+  depends_on    = ["null_resource.builder-key","null_resource.delivery-user","null_resource.delivery-cookbooks"]
   ami           = "${lookup(var.ami_map, format("%s-%s", var.ami_os, var.aws_region))}"
   count         = "${var.server_count}"
   instance_type = "${var.aws_flavor}"
+  associate_public_ip_address = "${var.public_ip}"
   subnet_id     = "${var.aws_subnet_id}"
   vpc_security_group_ids = ["${aws_security_group.chef-delivery.id}"]
   key_name      = "${var.aws_key_name}"
@@ -186,21 +177,37 @@ resource "aws_instance" "chef-delivery" {
     Description = "${var.tag_description}"
   }
   root_block_device = {
-    delete_on_termination = true
+    delete_on_termination = "${var.root_delete_termination}"
   }
   connection {
     user        = "${lookup(var.ami_usermap, var.ami_os)}"
     private_key = "${var.aws_private_key_file}"
     host        = "${self.public_ip}"
   }
-  # Create path to delivery license
+  # Clean up any potential node/client conflicts
+  provisioner "local-exec" {
+    command = "knife node-delete   ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
+  }
+  provisioner "local-exec" {
+    command = "knife client-delete ${var.hostname}.${var.domain} -y -c ${var.knife_rb} ; echo OK"
+  }
+  # Handle iptables
+  provisioner "remote-exec" {
+    inline = [
+      "sudo service iptables stop",
+      "sudo chkconfig iptables off",
+      "sudo ufw disable",
+      "echo Say WHAT one more time"
+    ]
+  }
+  # Prepare some directories to stage files
   provisioner "remote-exec" {
     inline = [
       "mkdir -p .delivery",
       "sudo mkdir -p /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
-  # Upload license and user key files
+  # Transfer in required files
   provisioner "file" {
     source      = "${var.delivery_license}"
     destination = ".delivery/delivery.license"
@@ -217,7 +224,7 @@ resource "aws_instance" "chef-delivery" {
     source      = ".delivery/builder_key.pub"
     destination = ".delivery/builder_key.pub"
   }
-  # Put files in proper locations
+  # Move files to final location
   provisioner "remote-exec" {
     inline = [
       "sudo mv .delivery/delivery.license /var/opt/delivery/license",
@@ -226,21 +233,13 @@ resource "aws_instance" "chef-delivery" {
       "sudo chown -R root:root /var/opt/delivery/license /etc/delivery /etc/chef"
     ]
   }
-  # Handle iptables
-  provisioner "remote-exec" {
-    inline = [
-      "sudo service iptables stop",
-      "sudo chkconfig iptables off",
-      "sudo ufw disable",
-      "echo Say WHAT one more time"
-    ]
-  }
   # Provision with Chef
   provisioner "chef" {
     attributes_json = "${template_file.attributes-json.rendered}"
-    # environment     = "_default"
-    run_list        = ["system::default","delivery-cluster::delivery"]
+    environment     = "_default"
+    log_to_file     = "${var.log_to_file}"
     node_name       = "${var.hostname}.${var.domain}"
+    run_list        = ["system::default","recipe[chef-client::default]","recipe[chef-client::config]","recipe[chef-client::cron]","recipe[chef-client::delete_validation]","delivery-cluster::delivery"]
     secret_key      = "${file("${var.secret_key_file}")}"
     server_url      = "https://${var.chef_fqdn}/organizations/${var.chef_org}"
     validation_client_name = "${var.chef_org}-validator"
@@ -288,21 +287,5 @@ resource "aws_instance" "chef-delivery" {
   provisioner "local-exec" {
     command = "cat .delivery/${var.ent}.creds"
   }
-}
-# Public Route53 DNS record
-resource "aws_route53_record" "chef-delivery" {
-  zone_id = "${var.r53_zone_id}"
-  name    = "${aws_instance.chef-delivery.tags.Name}"
-  type    = "A"
-  ttl     = "${var.r53_ttl}"
-  records = ["${aws_instance.chef-delivery.public_ip}"]
-}
-# Private Route53 DNS record
-resource "aws_route53_record" "chef-delivery-private" {
-  zone_id = "${var.r53_zone_internal_id}"
-  name    = "${aws_instance.chef-delivery.tags.Name}"
-  type    = "A"
-  ttl     = "${var.r53_ttl}"
-  records = ["${aws_instance.chef-delivery.private_ip}"]
 }
 
