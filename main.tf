@@ -237,6 +237,7 @@ resource "aws_instance" "chef-delivery" {
     server_url      = "https://${var.chef_fqdn}/organizations/${var.chef_org}"
     validation_client_name = "${var.chef_org}-validator"
     validation_key  = "${file("${var.chef_org_validator}")}"
+    version         = "${var.client_version}"
   }
   # Upload SSL certificate/key files
   provisioner "file" {

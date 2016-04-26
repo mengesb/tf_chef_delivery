@@ -3,11 +3,15 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
-v0.3.5 (2016-04-26)
+v0.3.6 (2016-04-26)
 -------------------
 - [Brian Menges] - Remove delivery data bag, leave keys data bag
 - [Brian Menges] - Improve scripting and sed magic
 - [Brian Menges] - Replace `credentials` with `credentials_file` in [outputs.tf](outputs.tf)
+
+v0.3.5 (2016-04-25)
+-------------------
+- [Brian Menges] - Use `client_version`
 
 v0.3.4 (2016-04-25)
 -------------------
