@@ -5,6 +5,10 @@ This file is used to list changes made in each version of the Terraform plan.
 
 v0.3.6 (2016-04-26)
 -------------------
+- [Brian Menges] - Fix unterminated line in [outputs.tf](outputs.tf)
+
+v0.3.6 (2016-04-26)
+-------------------
 - [Brian Menges] - Remove delivery data bag, leave keys data bag
 - [Brian Menges] - Improve scripting and sed magic
 - [Brian Menges] - Replace `credentials` with `credentials_file` in [outputs.tf](outputs.tf)
