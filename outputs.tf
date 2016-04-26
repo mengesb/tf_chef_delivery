@@ -1,6 +1,6 @@
 # Outputs
-output "credentials" {
-  value = "\n${file(".delivery/${var.ent}.creds")}"
+output "credentials_file" {
+  value = ".delivery/${var.ent}.creds")}"
 }
 output "fqdn" {
   value = "${aws_instance.chef-delivery.tags.Name}"
