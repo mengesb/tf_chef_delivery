@@ -111,9 +111,11 @@ ami_usermap.<ami_os> = "value"
 
 ## Outputs
 
-* `delivery_creds`: CHEF Delivery credentials with useful login information
-* `public_dns`: DNS address of the CHEF Delivery instance.
-* `security_group_id`: The AWS security group id for this instance.
+* `credentials_file`: CHEF Delivery credentials file with useful login information
+* `fqdn`: Fully qualified domain name of the instance
+* `public_ip`: Public IPv4 address of the instance.
+* `private_ip`: Private IPv4 address of the instance.
+* `security_group_id`: The AWS security group id for the instance.
 
 ## Contributors
 

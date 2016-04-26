@@ -71,12 +71,11 @@ resource "template_file" "attributes-json" {
   }
 }
 # Delivery builder databag template
-resource "template_file" "builder-json" {
+resource "template_file" "delivery_builder_keys-json" {
   template = "${file("${path.module}/files/delivery-builder-keys-json.tpl")}"
-}
-# Delivery data bag
-resource "template_file" "delivery-json" {
-  template = "${file("${path.module}/files/delivery-json.tpl")}"
+  vars {
+    username  = "${var.username}"
+  }
 }
 # Purge local cache directory
 resource "null_resource" "clean-slate" {
@@ -115,36 +114,23 @@ resource "null_resource" "delivery-user" {
   provisioner "local-exec" {
     command = "scp -o stricthostkeychecking=no -i ${var.aws_private_key_file} ${lookup(var.ami_usermap, var.ami_os)}@${var.chef_fqdn}:.delivery/${var.username}.pem .delivery/${var.username}.pem"
   }
-  # Update delivery data bag and push
-  provisioner "local-exec" {
-    command = <<-EOC
-      cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag
-      cat > .delivery/delivery.json <<EOF
-      ${template_file.delivery-json.rendered}
-      EOF
-      cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag`/ge' -i delivery.json && cd ..
-      rm -rf .delivery/${var.username}_databag
-      knife data bag create delivery
-      knife data bag from file delivery .delivery/delivery.json --encrypt --secret-file ${var.secret_key_file}
-      EOC
-  }
 }
 # Generate build user and data bag information
 resource "null_resource" "builder-key" {
-  depends_on = ["null_resource.clean-slate","null_resource.wait_on"]
+  depends_on = ["null_resource.delivery-user","null_resource.wait_on"]
   provisioner "local-exec" {
     command = "ssh-keygen -q -t rsa -N '' -b 2048 -f .delivery/builder_key"
   }
   provisioner "local-exec" {
     command = <<-EOC
-      cat .delivery/builder_key | perl -pe 's/\n/\\n/g' > .delivery/builder_databag
-      cat .delivery/${var.username}.pem | perl -pe 's/\n/\\n/g' > .delivery/${var.username}_databag2
       cat > .delivery/delivery_builder_keys.json <<EOF
-      ${template_file.builder-json.rendered}
+      ${template_file.delivery_builder_keys-json.rendered}
       EOF
-      cd .delivery && perl -pe 's/text1/`cat builder_databag`/ge' -i delivery_builder_keys.json && cd ..
-      cd .delivery && perl -pe 's/text2/`cat ${var.username}_databag2`/ge' -i delivery.json && cd ..
-      rm -rf .delivery/builder_databag .delivery/${var.username}_databag2
+      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/builder_key > .delivery/builder_key_databag
+      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/${var.username}.pem > .delivery/delivery_key_databag
+      cd .delivery && perl -pe 's/text1/`cat builder_key_databag`/ge' -i delivery_builder_keys.json && cd ..
+      cd .delivery && perl -pe 's/text2/`cat delivery_key_databag`/ge' -i delivery_builder_keys.json && cd ..
+      rm -rf .delivery/builder_key_databag .delivery/delivery_key_databag
       knife data bag create keys
       knife data bag from file keys .delivery/delivery_builder_keys.json --encrypt --secret-file ${var.secret_key_file}
       EOC
@@ -293,9 +279,11 @@ resource "aws_instance" "chef-delivery" {
   provisioner "local-exec" {
     command = "scp -o StrictHostKeyChecking=no -i ${var.aws_private_key_file} ${lookup(var.ami_usermap, var.ami_os)}@${self.public_ip}:.delivery/${var.ent}.creds .delivery/${var.ent}.creds"
   }
-  # Local echo
   provisioner "local-exec" {
-    command = "cat .delivery/${var.ent}.creds"
+    command = <<-EOC
+      echo "Delivery user: ${var.username}" | tee -a .delivery/${var.ent}.creds
+      echo "Delivery user password: ${base64sha256(null_resource.delivery-user.id)} | tee -a .delivery/${var.ent}.creds
+      EOC
   }
 }
 
