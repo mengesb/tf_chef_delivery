@@ -126,9 +126,9 @@ resource "null_resource" "builder-key" {
       cat > .delivery/delivery_builder_keys.json <<EOF
       ${template_file.delivery_builder_keys-json.rendered}
       EOF
-      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/builder_key > .delivery/builder_key_databag
-      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/${var.username}.pem > .delivery/delivery_key_databag
-      cd .delivery && perl -pe 's/text1/`cat builder_key_databag`/ge' -i delivery_builder_keys.json && cd ..
+      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/builder_key         | tr -d '\n' > .delivery/builder_key_databag
+      sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\\n/g' .delivery/${var.username}.pem | tr -d '\n' > .delivery/delivery_key_databag
+      cd .delivery && perl -pe 's/text1/`cat builder_key_databag`/ge'  -i delivery_builder_keys.json && cd ..
       cd .delivery && perl -pe 's/text2/`cat delivery_key_databag`/ge' -i delivery_builder_keys.json && cd ..
       rm -rf .delivery/builder_key_databag .delivery/delivery_key_databag
       knife data bag create keys

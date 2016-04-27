@@ -3,7 +3,11 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
-v0.3.6 (2016-04-26)
+v0.3.8 (2016-04-26)
+-------------------
+- [Brian Menges] - Source data bag files contained trailing newline, using tr to remove
+
+v0.3.7 (2016-04-26)
 -------------------
 - [Brian Menges] - Fix unterminated line in [outputs.tf](outputs.tf)
 
