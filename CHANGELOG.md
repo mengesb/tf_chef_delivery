@@ -3,6 +3,10 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
+v0.3.9 (2016-04-26)
+-------------------
+- [Brian Menges] - Missing double quote in delivery credentials file write resource
+
 v0.3.8 (2016-04-26)
 -------------------
 - [Brian Menges] - Source data bag files contained trailing newline, using tr to remove

@@ -283,7 +283,7 @@ resource "aws_instance" "chef-delivery" {
   provisioner "local-exec" {
     command = <<-EOC
       echo "Delivery user: ${var.username}" | tee -a .delivery/${var.ent}.creds
-      echo "Delivery user password: ${base64sha256(null_resource.delivery-user.id)} | tee -a .delivery/${var.ent}.creds
+      echo "Delivery user password: ${base64sha256(null_resource.delivery-user.id)}" | tee -a .delivery/${var.ent}.creds
       EOC
   }
 }
