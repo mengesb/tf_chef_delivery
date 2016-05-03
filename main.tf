@@ -66,8 +66,10 @@ resource "template_file" "attributes-json" {
   vars {
     chef_fqdn = "${var.chef_fqdn}"
     chef_org  = "${var.chef_org}"
-    host      = "${var.hostname}"
     domain    = "${var.domain}"
+    host      = "${var.hostname}"
+    license   = "${var.accept_license}"
+    version   = "${var.delivery_version}"
   }
 }
 # Delivery builder databag template
@@ -77,7 +79,7 @@ resource "template_file" "delivery_builder_keys-json" {
     username  = "${var.username}"
   }
 }
-# Purge local cache directory
+# Local Prep
 resource "null_resource" "clean-slate" {
   provisioner "local-exec" {
     command = "rm -rf .delivery ; mkdir -p .delivery"
@@ -170,6 +172,8 @@ resource "aws_instance" "chef-delivery" {
   }
   root_block_device = {
     delete_on_termination = "${var.root_delete_termination}"
+    volume_size = "${var.root_volume_size}"
+    volume_type = "${var.root_volume_type}"
   }
   connection {
     user        = "${lookup(var.ami_usermap, var.ami_os)}"

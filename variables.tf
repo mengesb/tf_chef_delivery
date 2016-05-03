@@ -102,6 +102,10 @@ variable "ami_usermap" {
 #
 # specific configs
 #
+variable "accept_license" {
+  description = "Accept the Chef MLSA"
+  default     = false
+}
 variable "allowed_cidrs" {
   description = "List of CIDRs to allow SSH from (CSV list allowed)"
   default     = "0.0.0.0/0"
@@ -121,6 +125,10 @@ variable "client_version" {
 }
 variable "delivery_license" {
   description = "Path to Delivery license file"
+}
+variable "delivery_version" {
+  description = "Delivery Server version to install on instance"
+  default     = "latest"
 }
 variable "domain" {
   description = "Delivery server domain name"
@@ -149,6 +157,14 @@ variable "public_ip" {
 variable "root_delete_termination" {
   description = "Delete server root block device on termination"
   default     = true
+}
+variable "root_volume_size" {
+  description = "Size in GB of root device"
+  default     = 20
+}
+variable "root_volume_type" {
+  description = "Type of root volume"
+  default     = "standard"
 }
 variable "secret_key_file" {
   description = "Encrypted data bag secret file"

@@ -3,6 +3,12 @@ tf_chef_delivery CHANGELOG
 
 This file is used to list changes made in each version of the Terraform plan.
 
+v1.0.0 (2016-05-02)
+-------------------
+- [Brian Menges] - Add `accept_license` to handle Chef MLSA
+- [Brian Menges] - Add `delivery_version` to install specific Delivery version. Default: `latest`
+- [Brian Menges] - Add `root_volume_size` and `root_volume_type` variables to handle larger than default root volumes
+
 v0.3.9 (2016-04-26)
 -------------------
 - [Brian Menges] - Missing double quote in delivery credentials file write resource

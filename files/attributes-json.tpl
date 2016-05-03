@@ -1,8 +1,10 @@
 {
   "delivery-cluster": {
     "delivery": {
+      "accept_license": ${license},
       "chef_server": "https://${chef_fqdn}/organizations/${chef_org}",
-      "fqdn": "${host}.${domain}"
+      "fqdn": "${host}.${domain}",
+      "version": "${version}"
     }
   },
   "fqdn": "${host}.${domain}",
